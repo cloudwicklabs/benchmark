@@ -6,7 +6,7 @@ HBase, Redis, Solr and various others.
 
 **Supported**: MongoDB, Solr
 
-**WIP**: Cassandra
+**WIP**: Cassandra, HBase
 
 Build Project
 -------------
@@ -40,9 +40,14 @@ Possible COMMAND(s)
   solr        solr benchmark driver
   cassandra   cassandra benchmark driver
 ```
+where, each sub-command represents a driver interface to the applicaition that invoked to benchmark.
 
 ###To benchmark Mongo
-Using the mongo benchmark driver
+Mongo benchmark driver can do the following:
+
+  * Benchmark inserts for given number of events
+  * Benchmark random reads
+  * Benchmark predefined aggregate queries on top of inserted data
 
 ```
 $bin/run mongo --help
@@ -107,8 +112,20 @@ Mongo Driver Example(s):
     bin/run mongo --mode agg_query
     ```
 
+**NOTE**: By default, mongo benchmark driver tries to connect to local instance of mongo, please use `--mongoURL` to specify the path where the mongo is listening. For more details on how to build the url please visit [here](http://goo.gl/UglKHb).
+
+Example connection URI scheme: 
+
+```
+mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
+```
+
 ###To benchmark Solr
-Using the solr benchmark driver
+Solr benchmark driver can do the following:
+
+  * Benchmark inserts for a give range of inputs
+  * Benchmark random reads
+  * Benchmark custom user input queries
 
 ```
 $bin/run solr --help
@@ -138,6 +155,21 @@ Indexes log events to solr
   --help
         prints this usage text
 ```
+
+Before, benchmarking Solr you have to create a solr collection|core named `logs`. The following steps illustrate how to create a collection named logs on single solr core instance:
+
+```
+cp -r $SOLR_HOME/example $SOLR_HOME/logs
+cp -r $SOLR_HOME/tweets/solr/collection1 $SOLR_HOME/tweets/solr/logs
+rm -r $SOLR_HOME/tweets/solr/collection1
+echo 'name=logs' > $SOLR_HOME/tweets/solr/logs/core.properties
+```
+*where, `$SOLR_HOME` is path where solr is installed (unpacked).*
+
+Also,
+
+  * `schema.xml` from logs collection should be replaced with `resources/schema.xml` from the project dir
+  * `solrconfig.xml` from logs collection should be replaced with `resources/solrconfig.xml` from the project dir
 
 Solr Driver Example(s):
 
