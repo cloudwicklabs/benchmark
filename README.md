@@ -40,7 +40,7 @@ Possible COMMAND(s)
   solr        solr benchmark driver
   cassandra   cassandra benchmark driver
 ```
-where, each sub-command represents a driver interface to the applicaition that invoked to benchmark.
+where, each sub-command represents a driver interface to the applicaition that's invoked to benchmark.
 
 ###To benchmark Mongo
 Mongo benchmark driver can do the following:
