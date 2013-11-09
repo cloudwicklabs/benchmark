@@ -29,16 +29,13 @@ object Driver extends App {
     } text "url for connecting to solr server instance"
     arg[Int]("<totalEvents>...") unbounded() optional() action { (x, c) =>
       c.copy(totalEvents = c.totalEvents :+ x)
-    } text "total number of events to insert"
-//    opt[Int]('e', "eventsPerSec") action { (x, c) =>
-//      c.copy(eventsPerSec = x)
-//    } text "number of log events to generate per sec"
+    } text "total number of events to insert|read"
     opt[Int]('s', "ipSessionCount") action { (x, c) =>
       c.copy(ipSessionCount = x)
-    } text "number of times a ip can appear in a session"
+    } text "number of times a ip can appear in a session, defaults to: '25'"
     opt[Int]('l', "ipSessionLength") action { (x, c) =>
       c.copy(ipSessionLength = x)
-    } text "size of the session"
+    } text "size of the session, defaults to: 50"
     opt[Int]('b', "batchSize") action { (x, c) =>
       c.copy(batchSize = x)
     } text "flushes events from memory to solr index, defaults to: '1000'"
