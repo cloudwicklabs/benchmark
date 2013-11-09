@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+
+SELF=`which "$0" 2> /dev/null`
+[ $? -gt 0 -a -f "$0" ] && SELF="./$0"
+
+VERSION="0.1"
+
+JAR="target/scala-2.10/benchmark-assembly-${VERSION}.jar"
+
+if [ ! -f ${JAR} ]; then
+  echo "[Error]: Cannot find jar, compile using 'sbt assembly'"
+  exit 1
+fi
+
+function usage () {
+  echo "Usage: `basename $0` COMMAND"
+  echo "Possible COMMAND(s)"
+  echo "  mongo       mongo benchmark driver"
+  echo "  solr        solr benchmark driver"
+  echo "  cassandra   cassandra benchmark driver"
+  exit 1
+}
+
+if [ $# -eq 0 ]; then
+  usage
+fi
+
+COMMAND=$1
+shift
+
+# Java Options
+JAVA=java
+if [ -n "${JAVA_HOME}" ]; then
+  JAVA="${JAVA_HOME}/bin/java"
+fi
+JAVA_HEAP_SIZE=-Xmx1000m
+
+if [ "$COMMAND" = "mongo" ]; then
+  CLASS="com.cloudwick.mongo.Driver"
+elif [ "$COMMAND" = "solr" ]; then
+  CLASS="com.cloudwick.solr.Driver"
+elif [ "$COMMAND" = "cassandra" ]; then
+  CLASS="com.cloudwick.cassandra.Driver"
+  echo "Not yet implemented"
+  exit 1
+else
+  usage
+fi
+
+exec "${JAVA}" ${java_args} -cp ${JAR} ${CLASS} "$@"
