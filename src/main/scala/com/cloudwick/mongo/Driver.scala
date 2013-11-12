@@ -7,6 +7,7 @@ import scala.collection.mutable.ListBuffer
 import com.mongodb.casbah.commons.MongoDBObject
 import scala.util.Random
 import org.slf4j.LoggerFactory
+import com.cloudwick.generator.utils.Utils
 
 /**
  * Driver for the mongo benchmark
@@ -14,6 +15,7 @@ import org.slf4j.LoggerFactory
  */
 object Driver extends App {
   private val logger = LoggerFactory.getLogger(getClass)
+  private val utils = new Utils
 
   /*
    * Command line option parser
@@ -96,7 +98,7 @@ object Driver extends App {
         var totalMessagesCount = 0
 
         val benchmarkInserts = (events: Int) => {
-          time(s"inserting $events") {
+          utils.time(s"inserting $events") {
             (1 to events).foreach { _ =>
               messagesCount += 1
               totalMessagesCount += 1
@@ -138,7 +140,7 @@ object Driver extends App {
        * Performs random reads
        */
       val benchmarkReads = (numberOfReads: Int) => {
-        time(s"reading $numberOfReads") {
+        utils.time(s"reading $numberOfReads") {
           // Get the count of events from mongo
           val totalDocuments = mongo.documentsCount(collection)
           logger.info("Total number of documents in the collection :" + totalDocuments)
@@ -168,56 +170,41 @@ object Driver extends App {
        */
       val pipeline1 = mongo.buildQueryOne
       logger.info("Query 1 : Gets the number of times a status code has appeared")
-      time("aggregate query 1") {
+      utils.time("aggregate query 1") {
         mongo.aggregationResult(mongoClient, config.mongoDbName, config.mongoCollectionName, pipeline1)
       }
 
       val pipeline2 = mongo.buildQueryTwo
       logger.info("Query 2: Co-relates request page to response code")
-      time("aggregate query 2") {
+      utils.time("aggregate query 2") {
         mongo.aggregationResult(mongoClient, config.mongoDbName, config.mongoCollectionName, pipeline2)
       }
 
       val pipeline3 = mongo.buildQueryThree
       logger.info("Query 3: Counts total number of bytes served for each page by web server")
-      time("aggregate query 3") {
+      utils.time("aggregate query 3") {
         mongo.aggregationResult(mongoClient, config.mongoDbName, config.mongoCollectionName, pipeline3)
       }
 
       val pipeline4 = mongo.buildQueryFour
       logger.info("Query 4: Counts how many times a client visited the site")
-      time("aggregate query 4") {
+      utils.time("aggregate query 4") {
         mongo.aggregationResult(mongoClient, config.mongoDbName, config.mongoCollectionName, pipeline4)
       }
 
       val pipeline5 = mongo.buildQueryFive
       logger.info("Query 5: Top 10 site visitors")
-      time("aggregate query 5") {
+      utils.time("aggregate query 5") {
         mongo.aggregationResult(mongoClient, config.mongoDbName, config.mongoCollectionName, pipeline5)
       }
 
       val pipeline6 = mongo.buildQuerySix
       logger.info("Query 5: Top Browsers")
-      time("aggregate query 6") {
+      utils.time("aggregate query 6") {
         mongo.aggregationResult(mongoClient, config.mongoDbName, config.mongoCollectionName, pipeline6)
       }
     }
   } getOrElse {
     logger.error("Failed to parse command line arguments")
-  }
-
-  /**
-   * Measures time took to run a block
-   * @param block code block to run
-   * @param message additional message to print
-   * @tparam R type
-   * @return returns block output
-   */
-  def time[R](message: String = "code block")(block: => R): R = {
-    val s = System.nanoTime
-    // block: => R , implies call by name i.e, the execution of block is delayed until its called by name
-    val ret = block
-    logger.info("Time elapsed in " + message + " : " +(System.nanoTime - s)/1e6+"ms")
-    ret
   }
 }

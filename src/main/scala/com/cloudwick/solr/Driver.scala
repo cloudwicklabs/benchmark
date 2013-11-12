@@ -11,6 +11,7 @@ import scala.util.Random
  */
 object Driver extends App {
   private val logger = LoggerFactory.getLogger(getClass)
+  private val utils = new com.cloudwick.generator.utils.Utils
 
   val optionsParser = new scopt.OptionParser[OptionsConfig]("index_logs") {
     head("solr", "0.1")
@@ -151,7 +152,7 @@ object Driver extends App {
       indexer.cleanup
     }
 
-    time(s"inserting $totalEvents") {
+    utils.time(s"inserting $totalEvents") {
       (1 to totalEvents).foreach { _ =>
         messagesCount += 1
         totalMessagesCount += 1
@@ -173,7 +174,7 @@ object Driver extends App {
    * @param totalReads number of reads to perform
    */
   def readLogs(searcher: SearchLogs, totalReads: Int) = {
-    time(s"reading $totalReads") {
+    utils.time(s"reading $totalReads") {
       val totalDocuments = searcher.getCount
       (1 to totalReads).foreach { eventCount =>
         printf("\rLogEvents retrieved: " + eventCount)
@@ -195,20 +196,5 @@ object Driver extends App {
     results.documents.foreach { logEvent: Map[String, Any] =>
       searcher.prettyPrint(logEvent)
     }
-  }
-
-  /**
-   * Measures time took to run a block
-   * @param block code block to run
-   * @param message additional message to print
-   * @tparam R type
-   * @return returns block output
-   */
-  def time[R](message: String = "code block")(block: => R): R = {
-    val s = System.nanoTime
-    // block: => R , implies call by name i.e, the execution of block is delayed until its called by name
-    val ret = block
-    logger.info("Time elapsed in " + message + " : " +(System.nanoTime - s)/1e6+"ms")
-    ret
   }
 }

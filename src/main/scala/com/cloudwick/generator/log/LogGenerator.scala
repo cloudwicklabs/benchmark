@@ -1,6 +1,7 @@
 package com.cloudwick.generator.log
 
 import scala.util.Random
+import com.cloudwick.generator.utils.Utils
 
 /**
  * Generates generator.log event
@@ -8,6 +9,7 @@ import scala.util.Random
  * @author ashrith 
  */
 class LogGenerator(var ipGenerator:IPGenerator) {
+  val utils = new Utils
 
   val RESPONSE_CODES = Map(
     "200" -> 92,
@@ -33,32 +35,16 @@ class LogGenerator(var ipGenerator:IPGenerator) {
     "Mozilla/5.0 (X11; Linux x86_64; rv:6.0a1) Gecko/20110421 Firefox/6.0a1" -> 40
   )
 
-  val random = Random
-
-  private def pickWeightedKey(map: Map[String, Int]): String = {
-    var total = 0
-    map.values.foreach { weight => total += weight }
-    val rand = Random.nextInt(total)
-    var running = 0
-    for((key, weight) <- map) {
-      if(rand >= running && rand < (running + weight)) {
-        return key
-      }
-      running += weight
-    }
-    map.keys.head
-  }
-
   def eventGenerate = {
     val format = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'")
     val date = format.format(new java.util.Date())
     new LogEvent(
       ipGenerator.get_ip,
       date,
-      pickWeightedKey(URLS),
-      pickWeightedKey(RESPONSE_CODES).toInt,
-      random.nextInt(2 * 1024) + 192,
-      pickWeightedKey(USER_AGENTS)
+      utils.pickWeightedKey(URLS),
+      utils.pickWeightedKey(RESPONSE_CODES).toInt,
+      Random.nextInt(2 * 1024) + 192,
+      utils.pickWeightedKey(USER_AGENTS)
     )
   }
 }

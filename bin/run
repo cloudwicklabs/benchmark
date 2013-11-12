@@ -41,8 +41,6 @@ elif [ "$COMMAND" = "solr" ]; then
   CLASS="com.cloudwick.solr.Driver"
 elif [ "$COMMAND" = "cassandra" ]; then
   CLASS="com.cloudwick.cassandra.Driver"
-  echo "Not yet implemented"
-  exit 1
 else
   usage
 fi

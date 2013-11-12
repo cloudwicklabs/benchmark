@@ -21,7 +21,8 @@ object Build extends Build {
       "org.slf4j" % "slf4j-api" % "1.7.5",
       "com.github.scopt" %% "scopt" % "3.1.0",
       "org.apache.solr" % "solr-solrj" % "4.3.1",
-      "jp.sf.amateras.solr.scala" %% "solr-scala-client" % "0.0.8"
+      "jp.sf.amateras.solr.scala" %% "solr-scala-client" % "0.0.8",
+      "com.datastax.cassandra" % "cassandra-driver-core" % "2.0.0-rc1"
     )
 
     val testDependencies = Seq(

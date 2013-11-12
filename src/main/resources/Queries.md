@@ -1,5 +1,8 @@
-Aggregation Queries on top of log events
-=======================================
+Queries
+=======
+
+MongoDB - Aggregation Queries on top of log events
+--------------------------------------------------
 
 1. Get number of times a status code has appeared
 
@@ -106,4 +109,63 @@ db.logEvents.aggregate([
         }
     }
 ])
+```
+
+Cassandra - Queries
+-------------------
+1. customer movie watch history
+
+```
+SELECT cid,movie_name,ts FROM moviedata.watch_history WHERE cid=<customer_id>;
+```
+
+2. Create secondary index on watch histories 'timestamp' column
+
+```
+CREATE INDEX ON moviedata.watch_history(ts);
+```
+
+3. Check which customers watched a movie with in a specific time period
+
+```
+SELECT cid, movie_name FROM moviedata.watch_history WHERE ts > <begin_timestamp> AND ts < <end_timestamp>;
+```
+
+4. Check all the movie ratings given by specific user
+
+```
+SELECT customer_name, movie_name, rating FROM moviedata.customer_rating WHERE cid=<customer_id>;
+```
+
+5. Check all the ratings and which user given to a specific movie
+
+```
+SELECT customer_name, movie_name, rating FROM moviedata.customer_rating WHERE movie_name=<value> ALLOW FILTERING;
+```
+
+> Error: Bad Request: No indexed columns present in by-columns clause with Equal operator
+
+6. Get all the movies of specific genre:
+
+```
+SELECT * FROM moviedata.movies_genre WHERE genre=<value>;
+```
+
+7. Get movies released in specific year:
+
+```
+CREATE INDEX ON moviedata.movies_genre(movie_name);
+SELECT * FROM moviedata.movies_genre WHERE release_year=<year> ALLOW FILTERING;
+```
+
+8. Get the genre, release_date of a movie:
+
+```
+SELECT genre, release_year FROM moviedata.movies_genre WHERE movie_name=<value>;
+```
+
+9. List the wish list of a customer
+
+```
+SELECT * FROM moviedata.customer_queue WHERE cid=<customer_id>;
 ```
