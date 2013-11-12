@@ -267,3 +267,5 @@ Cassandra Driver Example(s):
     ```
     bin/run cassandra --mode read 2500 25000 250000
     ```
+
+**Author**: [Ashrith](http://github.com/ashrithr)
