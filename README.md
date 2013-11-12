@@ -4,9 +4,9 @@ Benchmark NoSQL
 This project is intended to test write, read and query performances of several NoSQL data-stores like MongoDB, Cassandra,
 HBase, Redis, Solr and various others.
 
-**Supported**: MongoDB, Solr
+**Supported**: MongoDB, Solr, Cassandra
 
-**WIP**: Cassandra, HBase
+**WIP**: HBase
 
 Build Project
 -------------
@@ -123,7 +123,7 @@ mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][
 ###To benchmark Solr
 Solr benchmark driver can do the following:
 
-  * Benchmark inserts for a give range of inputs
+  * Benchmark inserts for a given range of inputs
   * Benchmark random reads
   * Benchmark custom user input queries
 
@@ -202,4 +202,68 @@ also providing batch size using which the driver will flush the data:
 
     ```
     bin/run solr --mode search --query '*:*' --queryCount 20
+    ```
+
+###To benchmark Cassandra
+Cassandra benchmark driver can do the following:
+  
+  * Benchmark inserts for a given range of inputs
+      * Generates random movie dataset events
+      * Can insert in both `batch` mode and `normal` mode, batch mode automatically batches a set of events and sends them to cassandra
+      * supports both `sync` and `async` operations, *async* does not wait for the cassandra to give the ack back
+  * Benchmark random reads
+      * Automatically builds random queries to query the data from inserted 4 tables
+
+```
+$bin/run cassandra --help
+cassandra 0.1
+Usage: cassandra_benchmark [options] [<totalEvents>...]
+
+  -m <insert|read|query> | --mode <insert|read|query>
+        operation mode ('insert' will insert events, 'read' will perform random reads & 'query' performs pre-defined set of queries on the inserted data set)
+  -n <value> | --cassNode <value>
+        cassandra node to connect, defaults to: '127.0.0.1'
+  <totalEvents>...
+        total number of events to insert|read
+  -b <value> | --batchSize <value>
+        size of the batch to flush to cassandra; set this to avoid single inserts, defaults to: '0'
+  -c <value> | --customersDataSize <value>
+        size of the data set of customers to use for generating data, defaults to: '1000'
+  -k <value> | --keyspaceName <value>
+        name of the database to create|connect in cassandra, defaults to: 'moviedata'
+  -d | --dropExistingTables
+        drop existing tables in the keyspace, defaults to: 'false'
+  -a | --aSyncInserts
+        performs asynchronous inserts, defaults to: 'false'
+  -r <value> | --replicationFactor <value>
+        replication factor to use when inserting data, defaults to: '1'
+  --help
+        prints this usage text
+```
+Cassandra Driver Example(s):
+
+1. To benchmark the inserts of 2500, 25000, 250000 of rows into 4 tables which is equivaluent to 10000, 100000, 1000000 insertions
+  
+    ```
+    bin/run cassandra --mode insert 2500 25000 250000
+    ```
+2. To benchmark the inserts of 2500, 25000, 250000 of rows into 4 tables using batch inserts with a batch size of 500
+  
+    ```
+    bin/run cassandra --mode insert 2500 25000 250000 --batchSize 500
+    ```
+3. To benchmark the inserts of 2500, 25000, 250000 of rows into 4 tables using batch inserts with a batch size of 500 and also delete the previously existing data in the tables:
+
+    ```
+    bin/run cassandra --mode insert 2500 25000 250000 --batchSize 500 --dropExistingTables
+    ```
+4. Perform inserts in async mode:
+  
+    ```
+    bin/run cassandra --mode insert 2500 25000 250000 --batchSize 500 --dropExistingTables --aSyncInserts
+    ```
+5. Perform random reads
+
+    ```
+    bin/run cassandra --mode read 2500 25000 250000
     ```
