@@ -10,7 +10,8 @@ object Build extends Build {
       organization := "com.cloudwick",
       scalacOptions ++= Seq("-unchecked", "-deprecation"),
       libraryDependencies ++= Dependencies.compile,
-      libraryDependencies ++= Dependencies.testDependencies
+      libraryDependencies ++= Dependencies.testDependencies,
+      resolvers ++= Dependencies.resolvers
     )
 
   object Dependencies {
@@ -29,6 +30,10 @@ object Build extends Build {
       "org.specs2" %% "specs2" % "1.14" % "test",
       "org.mockito" % "mockito-all" % "1.9.0" % "test",
       "org.hamcrest" % "hamcrest-all" % "1.1" % "test"
+    )
+
+    val resolvers = Seq(
+      "amateras-repo" at "http://amateras.sourceforge.jp/mvn/"
     )
   }
 }
