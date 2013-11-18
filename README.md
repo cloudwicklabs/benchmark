@@ -64,17 +64,21 @@ Usage: mongo_benchmark [options] [<totalEvents>...]
   <totalEvents>...
         total number of events to insert|read
   -s <value> | --ipSessionCount <value>
-        number of times a ip can appear in a session
+        number of times a ip can appear in a session, defaults to: '25'
   -l <value> | --ipSessionLength <value>
-        size of the session
+        size of the session, defaults to: '50'
   -b <value> | --batchSize <value>
-        size of the batch to flush to mongo instead of single inserts, defaults to: '1000'
+        size of the batch to flush to mongo instead of single inserts, defaults to: '0'
   -d <value> | --dbName <value>
         name of the database to create|connect in mongo, defaults to: 'logs'
   -c <value> | --collectionName <value>
         name of the collection to create|connect in mongo, defaults to: 'logEvents'
+  -w <value> | --writeConcern <value>
+        write concern level to use, possible values: none, safe, majority; defaults to: 'none'
   -i | --indexData
         index data on 'response_code' and 'request_page' after inserting, defaults to: 'false'
+  --shard
+        specifies whether to create a shard collection or a normal collection
   --help
         prints this usage text
 ```
@@ -82,37 +86,46 @@ Usage: mongo_benchmark [options] [<totalEvents>...]
 
 Mongo Driver Example(s):
 
-1. To benchmark the inserts of 100000, 1000000 and 100000000 documents consecutively:
+1. To benchmark the inserts of 100000, 1000000 and 100000000 documents consecutively on regular mongo instance:
 
     ```
     bin/run mongo --mode insert 100000 1000000 100000000
     ```
 
-2. To benchmark the inserts of 100000, 1000000 and 100000000 documents consecutively and also index the data once inserted:
+2. To benchmark the inserts of 100000, 1000000 and 100000000 documents consecutively on sharded mongo setup (this
+requires sharded cluster configured and benchmark run from mongos):
+
+    ```
+    bin/run mongo --mode insert 100000 1000000 100000000 --shard
+    ```
+
+3. To benchmark the inserts of 100000, 1000000 and 100000000 documents consecutively and also index the data once inserted:
 
     ```
     bin/run mongo --mode insert 100000 1000000 100000000 --indexData
     ```
 
-3. Inserting data with indexing and custom batch size:
+4. Inserting data with indexing and custom batch size:
 
     ```
     bin/run mongo --mode insert 100000 1000000 100000000 --indexData --batchSize 5000
     ```
 
-4. Benchmark random reads of 10000, 100000 and 1000000 documents:
+5. Benchmark random reads of 10000, 100000 and 1000000 documents:
 
     ```
     bin/run mongo --mode read 10000 100000 1000000
     ```
 
-5. Perform aggregation queries on the inserted data
+6. Perform aggregation queries on the inserted data
 
     ```
     bin/run mongo --mode agg_query
     ```
 
-**NOTE**: By default, mongo benchmark driver tries to connect to local instance of mongo, please use `--mongoURL` to specify the path where the mongo is listening. For more details on how to build the url please visit [here](http://goo.gl/UglKHb).
+**NOTE**: By default, mongo benchmark driver tries to connect to local instance of mongo, please use `--mongoURL` to
+specify the path where the mongo is listening. For more details on how to build the url please visit
+[here](http://goo.gl/UglKHb).
 
 Example connection URI scheme: 
 

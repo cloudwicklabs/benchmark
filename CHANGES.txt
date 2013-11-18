@@ -1,0 +1,17 @@
+Changes
+-------
+
+Mongo
+=====
+0.1 - Initial Commit
+0.2 - Adds support for shard environments
+0.3 - Adds support for write concern
+
+Solr
+====
+0.1 - Initial Commit
+
+
+Cassandra
+=========
+0.1 - Initial Commit

@@ -21,7 +21,7 @@ object Driver extends App {
    * Command line option parser
    */
   val optionsParser = new scopt.OptionParser[OptionsConfig]("mongo_benchmark") {
-    head("mongo", "0.1")
+    head("mongo", "0.3")
     opt[String]('m', "mode") required() valueName "<insert|read|agg_query>" action { (x, c) =>
       c.copy(mode = x)
     } validate { x: String =>
@@ -49,16 +49,27 @@ object Driver extends App {
     } text "size of the session, defaults to: '50'"
     opt[Int]('b', "batchSize") action { (x, c) =>
       c.copy(batchSize = x)
-    } text "size of the batch to flush to mongo instead of single inserts, defaults to: '1000'"
-    opt[String]('d', "dbName") action { (x,c) =>
+    } text "size of the batch to flush to mongo instead of single inserts, defaults to: '0'"
+    opt[String]('d', "dbName") action { (x, c) =>
       c.copy(mongoDbName = x)
     } text "name of the database to create|connect in mongo, defaults to: 'logs'"
-    opt[String]('c', "collectionName") action { (x,c) =>
+    opt[String]('c', "collectionName") action { (x, c) =>
       c.copy(mongoCollectionName = x)
     } text "name of the collection to create|connect in mongo, defaults to: 'logEvents'"
+    opt[String]('w', "writeConcern") action { (x, c) =>
+      c.copy(writeConcern = x)
+    } validate { x: String =>
+      if (x == "none" || x == "safe" || x == "majority")
+        success
+      else
+        failure("value of '--writeConcern' either 'none', 'safe' or 'majority'")
+    } text "write concern level to use, possible values: none, safe, majority; defaults to: 'none'"
     opt[Unit]('i', "indexData") action { (_, c) =>
       c.copy(indexData = true)
     } text "index data on 'response_code' and 'request_page' after inserting, defaults to: 'false'"
+    opt[Unit]("shard") action  { (_, c) =>
+      c.copy(shardMode = true)
+    } text "specifies whether to create a shard collection or a normal collection"
     help("help") text "prints this usage text"
   }
 
@@ -71,6 +82,11 @@ object Driver extends App {
     val mongo = new LogDAO(config.mongoURL)
     val mongoClient = mongo.initialize
     val collection = mongo.initCollection(mongoClient, config.mongoDbName, config.mongoCollectionName)
+    val writeConcern = config.writeConcern match {
+      case "none" => WriteConcern.None
+      case "safe" => WriteConcern.Safe
+      case "majority" => WriteConcern.Majority
+    }
 
     /*
      * Initialize generator
@@ -97,7 +113,7 @@ object Driver extends App {
         var messagesCount = 0
         var totalMessagesCount = 0
 
-        val benchmarkInserts = (events: Int) => {
+        val benchmarkInsertsBatch = (events: Int) => {
           utils.time(s"inserting $events") {
             (1 to events).foreach { _ =>
               messagesCount += 1
@@ -105,7 +121,7 @@ object Driver extends App {
               printf("\rMessages Count: " + totalMessagesCount)
               batch += mongo.makeMongoObject(logEventGen.eventGenerate, totalMessagesCount)
               if (messagesCount == config.batchSize || messagesCount == events) {
-                mongo.batchAdd(collection, batch)
+                mongo.batchAdd(collection, batch, writeConcern)
                 logger.debug("Flushing batch size of " + config.batchSize)
                 messagesCount = 0 // reset counter
                 batch.clear()     // reset list
@@ -120,16 +136,54 @@ object Driver extends App {
           totalMessagesCount = 0 // reset main counter
         }
 
+        val benchmarkInserts = (events: Int) => {
+          utils.time(s"inserting $events") {
+            (1 to events).foreach { _ =>
+              totalMessagesCount += 1
+              printf("\rMessages Count: " + totalMessagesCount)
+              mongo.addDocument(collection,
+                mongo.makeMongoObject(logEventGen.eventGenerate, totalMessagesCount),
+                writeConcern)
+            }
+            println()
+            // index inserted data
+            if (config.indexData) {
+              mongo.createIndexes(collection, List("request_page", "response_code"))
+            }
+          }
+          totalMessagesCount = 0 // reset main counter
+        }
+
         if (config.totalEvents.size == 0) {
           logger.info("Defaulting inserts to 1000")
-          logger.info("Dropping existing data in the collection")
-          mongo.dropCollection(collection)
-          benchmarkInserts(1000)
-        } else {
-          config.totalEvents.foreach{ events =>
+          if (config.shardMode) {
+            logger.info("Dropping existing data in the collection and rebuilding sharded collection")
+            mongo.initShardCollection(mongoClient, config.mongoDbName, config.mongoCollectionName)
+          } else {
             logger.info("Dropping existing data in the collection")
             mongo.dropCollection(collection)
-            benchmarkInserts(events)
+          }
+          if(config.batchSize == 0) {
+            benchmarkInserts(1000)
+          } else {
+            benchmarkInsertsBatch(1000)
+          }
+        } else {
+          config.totalEvents.foreach{ events =>
+            if (config.shardMode) {
+              logger.info("Dropping existing data in the collection and rebuilding sharded collection")
+              mongo.dropCollection(collection)
+              mongo.initShardCollection(mongoClient, config.mongoDbName, config.mongoCollectionName)
+            } else {
+              logger.info("Dropping existing data in the collection")
+              mongo.dropCollection(collection)
+            }
+
+            if (config.batchSize == 0) {
+              benchmarkInserts(events)
+            } else {
+              benchmarkInsertsBatch(events)
+            }
           }
         }
       } catch {
@@ -139,6 +193,7 @@ object Driver extends App {
       /*
        * Performs random reads
        */
+      val collection = mongo.initCollection(mongoClient, config.mongoDbName, config.mongoCollectionName)
       val benchmarkReads = (numberOfReads: Int) => {
         utils.time(s"reading $numberOfReads") {
           // Get the count of events from mongo

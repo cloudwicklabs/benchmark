@@ -31,19 +31,41 @@ class LogDAO(mongoConnectionUrl: String) {
    * @param mongoClient mongo client object to connect to
    * @param database name of the db to connect to (creates if does not exist)
    * @param collection name of the collection to use (creates if does not exist)
-   * @return
+   * @return MongoCollection object
    */
   def initCollection(mongoClient: MongoClient, database: String, collection: String): MongoCollection = {
-    val db = mongoClient(database)
-    db(collection)
+    mongoClient(database)(collection)
+  }
+
+  /**
+   * Creates shard collection on hashed key 'record_id'
+   * @param mongoClient mongo client object to connect to
+   * @param database name of the db to create
+   * @param collection name of the collection to use
+   * @return MongoCollection object
+   */
+  def initShardCollection(mongoClient: MongoClient, database: String, collection: String) = {
+    val adminDB = mongoClient("admin")
+    adminDB.command(MongoDBObject("enableSharding" -> database))
+    val shardKey = MongoDBObject("record_id" -> "hashed")
+    mongoClient(database)(collection).ensureIndex(shardKey)
+    adminDB.command(MongoDBObject("shardCollection" -> s"${database}.${collection}", "key" -> shardKey))
   }
 
   /**
    * Drops a collection
-   * @param collection name of the collection to drop
+   * @param collection mongo collection object to drop
    */
   def dropCollection(collection: MongoCollection) = {
     collection.drop()
+  }
+
+  /**
+   * Drops a database, use this with caution removes all data on disk
+   * @param database mongo database object to drop
+   */
+  def dropDatabase(database: MongoDB) = {
+    database.dropDatabase()
   }
 
   /**
@@ -65,19 +87,20 @@ class LogDAO(mongoConnectionUrl: String) {
    * @param documents list of documents to insert in batches
    * @return None
    */
-  def batchAdd(collection: MongoCollection, documents: ListBuffer[MongoDBObject]) = {
+  def batchAdd(collection: MongoCollection, documents: ListBuffer[MongoDBObject], concernLevel: WriteConcern) = {
     // :_* will get the elements instead of the list and avoid creating a List of List
+    collection.setWriteConcern(concernLevel)
     collection.insert(documents:_*)
   }
 
   /**
-   * Inserts a single document to mongo
+   * Inserts a single document to mongo with specified write concern level
    * @param collection mongo collection object to insert document to
    * @param doc mongo document object to insert
-   * @return None
+   * @return WriteResult
    */
-  def addDocument(collection: MongoCollection, doc: MongoDBObject) = {
-    collection.insert(doc)
+  def addDocument(collection: MongoCollection, doc: MongoDBObject, concernLevel: WriteConcern): WriteResult = {
+    collection.insert(doc, concernLevel)
   }
 
   /**

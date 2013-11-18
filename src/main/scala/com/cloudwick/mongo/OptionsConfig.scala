@@ -13,6 +13,8 @@ case class OptionsConfig(
   ipSessionLength: Int = 50,
   mongoDbName: String = "logs",
   mongoCollectionName: String = "logEvents",
-  batchSize: Int = 1000,
-  indexData: Boolean = false
+  batchSize: Int = 0,
+  indexData: Boolean = false,
+  shardMode: Boolean = false,
+  writeConcern: String = "none"
 )
