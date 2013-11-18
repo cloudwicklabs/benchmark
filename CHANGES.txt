@@ -6,6 +6,7 @@ Mongo
 0.1 - Initial Commit
 0.2 - Adds support for shard environments
 0.3 - Adds support for write concern
+0.4 - Shows index times as a separate entity
 
 Solr
 ====

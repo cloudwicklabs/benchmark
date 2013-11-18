@@ -3,12 +3,15 @@ package com.cloudwick.mongo.dao
 import com.mongodb.casbah.Imports._
 import com.cloudwick.generator.log.LogEvent
 import scala.collection.mutable.ListBuffer
+import org.slf4j.LoggerFactory
 
 /**
  * Interface for mongo
  * @author ashrith 
  */
 class LogDAO(mongoConnectionUrl: String) {
+  private val logger = LoggerFactory.getLogger(getClass)
+
   /**
    * Initializes db connection to mongo & creates db and collection if does not exist
    * @return MongoCollection object
@@ -75,7 +78,7 @@ class LogDAO(mongoConnectionUrl: String) {
    * @return None
    */
   def createIndexes(collection: MongoCollection, indexKeys: List[String]) = {
-    println("Creating indexes on :" + indexKeys.mkString(", "))
+    logger.info("Creating indexes on :" + indexKeys.mkString(", "))
     indexKeys.map{ key =>
       collection.ensureIndex(MongoDBObject(key.toString -> 1))
     }

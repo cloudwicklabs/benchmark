@@ -128,12 +128,14 @@ object Driver extends App {
               }
             }
             println()
-            // index inserted data
-            if (config.indexData) {
+          }
+          totalMessagesCount = 0 // reset main counter
+          // index inserted data
+          if (config.indexData) {
+            utils.time(s"indexing $events") {
               mongo.createIndexes(collection, List("request_page", "response_code"))
             }
           }
-          totalMessagesCount = 0 // reset main counter
         }
 
         val benchmarkInserts = (events: Int) => {
@@ -146,12 +148,15 @@ object Driver extends App {
                 writeConcern)
             }
             println()
-            // index inserted data
-            if (config.indexData) {
+          }
+          totalMessagesCount = 0 // reset main counter
+          // index inserted data
+          if (config.indexData) {
+            utils.time(s"indexing $events") {
               mongo.createIndexes(collection, List("request_page", "response_code"))
             }
           }
-          totalMessagesCount = 0 // reset main counter
+
         }
 
         if (config.totalEvents.size == 0) {
