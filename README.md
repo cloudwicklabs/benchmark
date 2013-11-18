@@ -52,7 +52,7 @@ Mongo benchmark driver can do the following:
 ```
 $bin/run mongo --help
 
-mongo 0.1
+mongo 0.3
 Usage: mongo_benchmark [options] [<totalEvents>...]
 
   -m <insert|read|agg_query> | --mode <insert|read|agg_query>
