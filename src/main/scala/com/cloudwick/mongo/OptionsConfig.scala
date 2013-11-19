@@ -16,5 +16,6 @@ case class OptionsConfig(
   batchSize: Int = 0,
   indexData: Boolean = false,
   shardMode: Boolean = false,
-  writeConcern: String = "none"
+  writeConcern: String = "none",
+  readPreference: String = "primary"
 )

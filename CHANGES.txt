@@ -7,6 +7,7 @@ Mongo
 0.2 - Adds support for shard environments
 0.3 - Adds support for write concern
 0.4 - Shows index times as a separate entity
+0.5 - Add support for read preference
 
 Solr
 ====

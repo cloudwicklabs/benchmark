@@ -21,7 +21,7 @@ object Driver extends App {
    * Command line option parser
    */
   val optionsParser = new scopt.OptionParser[OptionsConfig]("mongo_benchmark") {
-    head("mongo", "0.3")
+    head("mongo", "0.5")
     opt[String]('m', "mode") required() valueName "<insert|read|agg_query>" action { (x, c) =>
       c.copy(mode = x)
     } validate { x: String =>
@@ -64,6 +64,22 @@ object Driver extends App {
       else
         failure("value of '--writeConcern' either 'none', 'safe' or 'majority'")
     } text "write concern level to use, possible values: none, safe, majority; defaults to: 'none'"
+    opt[String]('r', "readPreference") action { (x, c) =>
+      c.copy(readPreference = x)
+    } validate { x: String =>
+      if (x == "primary" || x == "primaryPreferred" || x == "secondary" || x == "secondaryPreferred" || x == "nearest")
+        success
+      else
+        failure("value of '--readPreference' either 'primary', 'primaryPreferred', 'secondary', 'secondaryPreferred'" +
+          "or 'nearest'")
+    } text "read preference mode to use, possible values: primary, primaryPreferred, secondary, secondaryPreferred or " +
+        "nearest; defaults to: 'none'\n" +
+        "\t where,\n" +
+        "\t\tprimary - all read operations use only current replica set primary\n" +
+        "\t\tprimaryPreferred - if primary is unavailable fallback to secondary\n" +
+        "\t\tsecondary - all read operations use only secondary members of the replica set\n" +
+        "\t\tsecondaryPreferred - operations read from secondary members, fallback to primary\n" +
+        "\t\tnearest - use this mode to read from both primaries and secondaries (may return stale data)"
     opt[Unit]('i', "indexData") action { (_, c) =>
       c.copy(indexData = true)
     } text "index data on 'response_code' and 'request_page' after inserting, defaults to: 'false'"
@@ -201,6 +217,9 @@ object Driver extends App {
       val collection = mongo.initCollection(mongoClient, config.mongoDbName, config.mongoCollectionName)
       val benchmarkReads = (numberOfReads: Int) => {
         utils.time(s"reading $numberOfReads") {
+          // Set the read preference for the collection
+          logger.info("Setting the read preference to " + config.readPreference)
+          mongo.setReadPreference(collection, config.readPreference)
           // Get the count of events from mongo
           val totalDocuments = mongo.documentsCount(collection)
           logger.info("Total number of documents in the collection :" + totalDocuments)

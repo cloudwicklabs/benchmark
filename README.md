@@ -52,7 +52,7 @@ Mongo benchmark driver can do the following:
 ```
 $bin/run mongo --help
 
-mongo 0.3
+mongo 0.5
 Usage: mongo_benchmark [options] [<totalEvents>...]
 
   -m <insert|read|agg_query> | --mode <insert|read|agg_query>
@@ -75,6 +75,14 @@ Usage: mongo_benchmark [options] [<totalEvents>...]
         name of the collection to create|connect in mongo, defaults to: 'logEvents'
   -w <value> | --writeConcern <value>
         write concern level to use, possible values: none, safe, majority; defaults to: 'none'
+  -r <value> | --readPreference <value>
+        read preference mode to use, possible values: primary, primaryPreferred, secondary, secondaryPreferred or nearest; defaults to: 'none'
+	 where,
+		primary - all read operations use only current replica set primary
+		primaryPreferred - if primary is unavailable fallback to secondary
+		secondary - all read operations use only secondary members of the replica set
+		secondaryPreferred - operations read from secondary members, fallback to primary
+		nearest - use this mode to read from both primaries and secondaries (may return stale data)
   -i | --indexData
         index data on 'response_code' and 'request_page' after inserting, defaults to: 'false'
   --shard

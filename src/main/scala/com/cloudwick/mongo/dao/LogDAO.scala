@@ -153,6 +153,23 @@ class LogDAO(mongoConnectionUrl: String) {
   }
 
   /**
+   * Sets the read preference for a given collection
+   * @param collection to set the read preference for
+   * @param preference type of preference to set (possible values: primary, primaryPreferred, secondary,
+   *                   secondaryPreferred, nearest)
+   */
+  def setReadPreference(collection: MongoCollection, preference: String) = {
+    val readPref: ReadPreference = preference match {
+      case "primary" => ReadPreference.Primary
+      case "primaryPreferred" => ReadPreference.primaryPreferred
+      case "secondary" => ReadPreference.Secondary
+      case "secondaryPreferred" => ReadPreference.SecondaryPreferred
+      case "nearest" => ReadPreference.Nearest
+    }
+    collection.setReadPreference(readPref)
+  }
+
+  /**
    * Performs aggregation queries on mongo and prints the result to the stdout
    *
    * === Usage ===
