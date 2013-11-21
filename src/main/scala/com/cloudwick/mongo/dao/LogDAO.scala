@@ -113,7 +113,7 @@ class LogDAO(mongoConnectionUrl: String) {
    */
   def makeMongoObject(logEvent: LogEvent, recordId: Int): MongoDBObject = {
     MongoDBObject(
-      "record_id" -> recordId,
+      "_id" -> recordId,
       "ip" -> logEvent.ip,
       "timestamp" -> logEvent.timestamp,
       "request_page" -> logEvent.request,

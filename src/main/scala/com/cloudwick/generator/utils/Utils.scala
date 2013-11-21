@@ -11,9 +11,10 @@ class Utils {
   private val logger = LoggerFactory.getLogger(getClass)
 
   /**
-   *
-   * @param map
-   * @return
+   * Picks an element out of map, following the weight as the probability
+   * @param map map of key value pairs having key to picks and its value as the probability
+   *            of picking that key
+   * @return randomly picked key selected from map
    */
   def pickWeightedKey(map: Map[String, Int]): String = {
     var total = 0

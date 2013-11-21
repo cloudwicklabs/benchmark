@@ -17,5 +17,7 @@ case class OptionsConfig(
   indexData: Boolean = false,
   shardMode: Boolean = false,
   writeConcern: String = "none",
-  readPreference: String = "primary"
+  readPreference: String = "primary",
+  threadsCount: Int = 1,
+  threadPoolSize: Int = 10
 )

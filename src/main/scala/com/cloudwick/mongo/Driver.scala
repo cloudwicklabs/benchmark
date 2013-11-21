@@ -8,6 +8,9 @@ import com.mongodb.casbah.commons.MongoDBObject
 import scala.util.Random
 import org.slf4j.LoggerFactory
 import com.cloudwick.generator.utils.Utils
+import java.util.concurrent.{Executors, ExecutorService}
+import com.cloudwick.mongo.inserts.{BatchInsertConcurrent, InsertConcurrent}
+import com.cloudwick.mongo.reads.ReadsConcurrent
 
 /**
  * Driver for the mongo benchmark
@@ -21,7 +24,7 @@ object Driver extends App {
    * Command line option parser
    */
   val optionsParser = new scopt.OptionParser[OptionsConfig]("mongo_benchmark") {
-    head("mongo", "0.5")
+    head("mongo", "0.6")
     opt[String]('m', "mode") required() valueName "<insert|read|agg_query>" action { (x, c) =>
       c.copy(mode = x)
     } validate { x: String =>
@@ -50,6 +53,12 @@ object Driver extends App {
     opt[Int]('b', "batchSize") action { (x, c) =>
       c.copy(batchSize = x)
     } text "size of the batch to flush to mongo instead of single inserts, defaults to: '0'"
+    opt[Int]('t', "threadsCount") action { (x, c) =>
+      c.copy(threadsCount = x)
+    } text "number of threads to use for write and read operations, defaults to: 1"
+    opt[Int]('p', "threadPoolSize") action { (x, c) =>
+      c.copy(threadPoolSize = x)
+    } text "size of the thread pool, defaults to: 10"
     opt[String]('d', "dbName") action { (x, c) =>
       c.copy(mongoDbName = x)
     } text "name of the database to create|connect in mongo, defaults to: 'logs'"
@@ -98,18 +107,6 @@ object Driver extends App {
     val mongo = new LogDAO(config.mongoURL)
     val mongoClient = mongo.initialize
     val collection = mongo.initCollection(mongoClient, config.mongoDbName, config.mongoCollectionName)
-    val writeConcern = config.writeConcern match {
-      case "none" => WriteConcern.None
-      case "safe" => WriteConcern.Safe
-      case "majority" => WriteConcern.Majority
-    }
-
-    /*
-     * Initialize generator
-     */
-    val ipGenerator = new IPGenerator(config.ipSessionCount, config.ipSessionLength)
-    val logEventGen = new LogGenerator(ipGenerator)
-    // val sleepTime = if(config.eventsPerSec == 0) 0 else 1000/config.eventsPerSec
 
     /*
      * Handles shutdown gracefully - close connection to mongo when exiting
@@ -125,69 +122,26 @@ object Driver extends App {
        * Benchmark inserts
        */
       try {
-        val batch = new ListBuffer[MongoDBObject]
-        var messagesCount = 0
-        var totalMessagesCount = 0
-
-        val benchmarkInsertsBatch = (events: Int) => {
-          utils.time(s"inserting $events") {
-            (1 to events).foreach { _ =>
-              messagesCount += 1
-              totalMessagesCount += 1
-              printf("\rMessages Count: " + totalMessagesCount)
-              batch += mongo.makeMongoObject(logEventGen.eventGenerate, totalMessagesCount)
-              if (messagesCount == config.batchSize || messagesCount == events) {
-                mongo.batchAdd(collection, batch, writeConcern)
-                logger.debug("Flushing batch size of " + config.batchSize)
-                messagesCount = 0 // reset counter
-                batch.clear()     // reset list
-              }
-            }
-            println()
-          }
-          totalMessagesCount = 0 // reset main counter
-          // index inserted data
-          if (config.indexData) {
-            utils.time(s"indexing $events") {
-              mongo.createIndexes(collection, List("request_page", "response_code"))
-            }
-          }
-        }
-
-        val benchmarkInserts = (events: Int) => {
-          utils.time(s"inserting $events") {
-            (1 to events).foreach { _ =>
-              totalMessagesCount += 1
-              printf("\rMessages Count: " + totalMessagesCount)
-              mongo.addDocument(collection,
-                mongo.makeMongoObject(logEventGen.eventGenerate, totalMessagesCount),
-                writeConcern)
-            }
-            println()
-          }
-          totalMessagesCount = 0 // reset main counter
-          // index inserted data
-          if (config.indexData) {
-            utils.time(s"indexing $events") {
-              mongo.createIndexes(collection, List("request_page", "response_code"))
-            }
-          }
-
-        }
-
         if (config.totalEvents.size == 0) {
-          logger.info("Defaulting inserts to 1000")
+          val eventsSize = 10000
+          logger.info("Defaulting inserts to " + eventsSize)
           if (config.shardMode) {
             logger.info("Dropping existing data in the collection and rebuilding sharded collection")
             mongo.initShardCollection(mongoClient, config.mongoDbName, config.mongoCollectionName)
           } else {
-            logger.info("Dropping existing data in the collection")
+            logger.info("Dropping existing data in the collection and creating new collection")
             mongo.dropCollection(collection)
+            mongo.initCollection(mongoClient, config.mongoDbName, config.mongoCollectionName)
           }
           if(config.batchSize == 0) {
-            benchmarkInserts(1000)
+            new InsertConcurrent(eventsSize, config, mongo).run()
           } else {
-            benchmarkInsertsBatch(1000)
+            new BatchInsertConcurrent(eventsSize, config, mongo).run()
+          }
+          if (config.indexData) {
+            utils.time(s"indexing $eventsSize events") {
+              mongo.createIndexes(collection, List("request_page", "response_code"))
+            }
           }
         } else {
           config.totalEvents.foreach{ events =>
@@ -196,14 +150,19 @@ object Driver extends App {
               mongo.dropCollection(collection)
               mongo.initShardCollection(mongoClient, config.mongoDbName, config.mongoCollectionName)
             } else {
-              logger.info("Dropping existing data in the collection")
+              logger.info("Dropping existing data in the collection and createing a new collection")
               mongo.dropCollection(collection)
+              mongo.initCollection(mongoClient, config.mongoDbName, config.mongoCollectionName)
             }
-
             if (config.batchSize == 0) {
-              benchmarkInserts(events)
+              new InsertConcurrent(events, config, mongo).run()
             } else {
-              benchmarkInsertsBatch(events)
+              new BatchInsertConcurrent(events, config, mongo).run()
+            }
+            if (config.indexData) {
+              utils.time(s"indexing $events events") {
+                mongo.createIndexes(collection, List("record_id","request_page"))
+              }
             }
           }
         }
@@ -215,32 +174,23 @@ object Driver extends App {
        * Performs random reads
        */
       val collection = mongo.initCollection(mongoClient, config.mongoDbName, config.mongoCollectionName)
-      val benchmarkReads = (numberOfReads: Int) => {
-        utils.time(s"reading $numberOfReads") {
-          // Set the read preference for the collection
-          logger.info("Setting the read preference to " + config.readPreference)
-          mongo.setReadPreference(collection, config.readPreference)
-          // Get the count of events from mongo
-          val totalDocuments = mongo.documentsCount(collection)
-          logger.info("Total number of documents in the collection :" + totalDocuments)
-          if (totalDocuments == 0) {
-            logger.info("No documents found to read, please insert documents first using '--mode insert'")
-            System.exit(0)
-          }
-          (1 to numberOfReads).foreach { readQueryCount =>
-            mongo.findDocument(collection, MongoDBObject("record_id" -> Random.nextInt(totalDocuments)))
-            printf("\rRead queries executed: " + readQueryCount)
-          }
-          println()
-        }
+      // Set the read preference for the collection
+      logger.info("Setting the read preference to " + config.readPreference)
+      mongo.setReadPreference(collection, config.readPreference)
+      // Get the count of events from mongo
+      val totalDocuments = mongo.documentsCount(collection)
+      logger.info("Total number of documents in the collection :" + totalDocuments)
+      if (totalDocuments == 0) {
+        logger.info("No documents found to read, please insert documents first using '--mode insert'")
+        System.exit(0)
       }
 
       if(config.totalEvents.size == 0) {
-        logger.info("Defaulting reads to 100")
-        benchmarkReads(100)
+        logger.info("Defaulting reads to 10000")
+        new ReadsConcurrent(totalDocuments, 10000, config, mongo).run()
       } else {
         config.totalEvents.foreach { totalReads =>
-          benchmarkReads(totalReads)
+          new ReadsConcurrent(totalDocuments, totalReads, config, mongo).run()
         }
       }
     } else {

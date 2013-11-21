@@ -8,6 +8,7 @@ Mongo
 0.3 - Adds support for write concern
 0.4 - Shows index times as a separate entity
 0.5 - Add support for read preference
+0.6 - Adds support for concurrency
 
 Solr
 ====
