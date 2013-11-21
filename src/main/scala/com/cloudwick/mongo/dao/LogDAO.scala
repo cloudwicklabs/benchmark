@@ -4,6 +4,7 @@ import com.mongodb.casbah.Imports._
 import com.cloudwick.generator.log.LogEvent
 import scala.collection.mutable.ListBuffer
 import org.slf4j.LoggerFactory
+import scala.util.control.Breaks._
 
 /**
  * Interface for mongo
@@ -11,6 +12,10 @@ import org.slf4j.LoggerFactory
  */
 class LogDAO(mongoConnectionUrl: String) {
   private val logger = LoggerFactory.getLogger(getClass)
+  lazy val avgDocSize = 246 // in bytes
+  lazy val chunkSize = 512 * 1024 * 1024 // 500 MB in bytes
+  lazy val shardKey = "_id"
+  lazy val shardPrefix = "logs"
 
   /**
    * Initializes db connection to mongo & creates db and collection if does not exist
@@ -41,7 +46,7 @@ class LogDAO(mongoConnectionUrl: String) {
   }
 
   /**
-   * Creates shard collection on hashed key 'record_id'
+   * Creates shard collection on hashed key '_id'
    * @param mongoClient mongo client object to connect to
    * @param database name of the db to create
    * @param collection name of the collection to use
@@ -52,7 +57,59 @@ class LogDAO(mongoConnectionUrl: String) {
     adminDB.command(MongoDBObject("enableSharding" -> database))
     val shardKey = MongoDBObject("_id" -> "hashed")
     mongoClient(database)(collection).ensureIndex(shardKey)
-    adminDB.command(MongoDBObject("shardCollection" -> s"${database}.${collection}", "key" -> shardKey))
+    adminDB.command(MongoDBObject("shardCollection" -> s"$database.$collection", "key" -> shardKey))
+  }
+
+  /**
+   * Creates shard collection & pre-splits chunks and moves them to respective shards (assumes the shard names to be
+   * logs001, logs002, ...)
+   * @param mongoClient mongo client to connect to
+   * @param database name of the db to create
+   * @param collection name of the collection to use
+   * @param totalInserts total number of documents to pre-split chunks for
+   * @param numShards total number of shards to pre-split the collections to
+   */
+  /*
+    TODO get shard information from db.runCommand({'listShards': 1}) parse the result and get the shard names out
+   */
+  def initShardCollectionWithPreSplits(mongoClient: MongoClient,
+                                       database: String,
+                                       collection: String,
+                                       totalInserts: Long = 2^31,
+                                       numShards: Int =2) = {
+    val adminDB = mongoClient("admin")
+    // create shard collection
+    adminDB.command(MongoDBObject("enableSharding" -> database))
+    val shardKey = MongoDBObject("_id" -> 1)
+    adminDB.command(MongoDBObject("shardCOllection" -> s"$database.$collection", "key" -> shardKey))
+
+    val idsPerChunk = chunkSize / avgDocSize
+    var id = 0 // min _id
+    val maxId = totalInserts * 1.10 // increase by 10% of totalDocs expected (safe side)
+    var count = 0
+
+    while (true) {
+      id += idsPerChunk
+      if (id > maxId) break()
+      // create a pre-split
+      // db.runCommand({split: "$db.$collection", middle: {$shardKey: $id}})
+      adminDB.command(MongoDBObject(
+        "split" -> s"$database.$collection",
+        "middle" -> MongoDBObject(
+          "_id" -> id
+        )
+      ))
+
+      val shardNum = count % numShards
+      // move chunk
+      // db.runCommand({moveChunk: "$db.$collection, find: {$shardKey: $id}, to: "$shard"})
+      adminDB.command(MongoDBObject(
+        "moveChunk" -> s"$database.$collection",
+        "find" -> MongoDBObject("_id" -> id),
+        "to" -> s"${shardPrefix}00${shardNum+1}"
+      ))
+      count += 1
+    }
   }
 
   /**
