@@ -50,7 +50,7 @@ class LogDAO(mongoConnectionUrl: String) {
   def initShardCollection(mongoClient: MongoClient, database: String, collection: String) = {
     val adminDB = mongoClient("admin")
     adminDB.command(MongoDBObject("enableSharding" -> database))
-    val shardKey = MongoDBObject("record_id" -> "hashed")
+    val shardKey = MongoDBObject("_id" -> "hashed")
     mongoClient(database)(collection).ensureIndex(shardKey)
     adminDB.command(MongoDBObject("shardCollection" -> s"${database}.${collection}", "key" -> shardKey))
   }
