@@ -1,12 +1,9 @@
 package com.cloudwick.cassandra
 
-import com.cloudwick.generator.movie.{Customers, Person, MovieGenerator}
-import com.cloudwick.generator.utils.Utils
-import scala.util.Random
 import scala.collection.JavaConversions._
-import scala.collection.mutable.ArrayBuffer
-import java.util
 import org.slf4j.LoggerFactory
+import com.cloudwick.cassandra.inserts.{BatchInsertConcurrent, InsertConcurrent}
+import com.cloudwick.cassandra.reads.ReadsConcurrent
 
 /**
  * Driver interface for cassandra benchmark
@@ -14,13 +11,12 @@ import org.slf4j.LoggerFactory
  */
 object Driver extends App {
   private val logger = LoggerFactory.getLogger(getClass)
-  private val utils = new Utils
 
   /*
    * Command line option parser
    */
   val optionsParser = new scopt.OptionParser[OptionsConfig]("cassandra_benchmark") {
-    head("cassandra", "0.1")
+    head("cassandra", "0.2")
     opt[String]('m', "mode") required() valueName "<insert|read|query>" action { (x, c) =>
       c.copy(mode = x)
     } validate { x: String =>
@@ -49,11 +45,17 @@ object Driver extends App {
       c.copy(dropExistingTables = true)
     } text "drop existing tables in the keyspace, defaults to: 'false'"
     opt[Unit]('a', "aSyncInserts") action { (_, c) =>
-      c.copy(async = true)
+      c.copy(aSync = true)
     } text "performs asynchronous inserts, defaults to: 'false'"
     opt[Int]('r', "replicationFactor") action { (x, c) =>
       c.copy(replicationFactor = x)
     } text "replication factor to use when inserting data, defaults to: '1'"
+    opt[Int]('t', "threadsCount") action { (x, c) =>
+      c.copy(threadCount = x)
+    } text "number of threads to use for write and read operations, defaults to: 1"
+    opt[Int]('p', "threadPoolSize") action { (x, c) =>
+      c.copy(threadPoolSize = x)
+    } text "size of the thread pool, defaults to: 10"
     help("help") text "prints this usage text"
   }
 
@@ -63,8 +65,6 @@ object Driver extends App {
     /*
      * Initialize data generators and cassandra connection
      */
-    val movie = new MovieGenerator
-    val person = new Person
     val movieDAO = new com.cloudwick.cassandra.dao.MovieDAO(config.cassandraNode)
     val tableList = Seq("watch_history", "customer_rating", "customer_queue", "movies_genre")
 
@@ -82,22 +82,6 @@ object Driver extends App {
        * Benchmark Inserts
        */
       try {
-        // customers data bag
-        val customers = scala.collection.mutable.Map[Int, String]()
-        // Batch insert data holders
-        val customerWatchHistoryData = new util.HashMap[Integer, util.List[String]]()
-        val customerRatingData = new util.HashMap[Integer, util.List[String]]()
-        val customerQueueData = new util.HashMap[Integer, util.List[String]]()
-        val movieGenreData = new util.HashMap[Integer, util.List[String]]()
-        // counters for keeping track of batches and total inserts
-        var messagesCount = 0
-        var totalMessagesCount = 0
-
-        logger.info("Building a customer data set of size: " + config.customerDataSetSize)
-        (1 to config.customerDataSetSize).foreach { custId =>
-          customers += custId -> person.gen
-        }
-
         if (config.dropExistingTables) {
           tableList.foreach { table =>
             logger.info(s"Dropping table: $table")
@@ -109,182 +93,43 @@ object Driver extends App {
         movieDAO.createSchema(config.keyspaceName, config.replicationFactor)
 
         logger.info("Initializing Data Generator")
-        /*
-         * Anonymous function to insert data
-         */
-        val benchmarkInserts = (events: Int) => {
-          utils.time(s"inserting $events") {
-            val customerSize = customers.size
-
-            (1 to events).foreach { recordID =>
-              val cId: Int = Random.nextInt(customerSize) + 1
-              val cName: String = customers(cId)
-              val movieInfo: Array[String] = movie.gen
-              val customer: Customers = new Customers(cId, cName, movieInfo(3).toInt)
-
-              val customerID: Int               = customer.custId
-              val customerName: String          = customer.custName
-              val customerActive: String        = customer.userActiveOrNot
-              val customerTimeWatchedInit: Long = customer.timeWatched
-              val customerPausedTime: Int       = customer.pausedTime
-              val customerRating: String        = customer.rating
-              val movieId: String               = movieInfo(0)
-              val movieName: String             = movieInfo(1).replace("'", "")
-              val movieReleaseYear: String      = movieInfo(2)
-              val movieRunTime: String          = movieInfo(3)
-              val movieGenre: String            = movieInfo(4)
-
-              if (config.batchSize != 0) {
-                // Batch Inserts
-                customerWatchHistoryData.put(recordID, bufferAsJavaList(ArrayBuffer(
-                  customerID.toString,
-                  customerTimeWatchedInit.toString,
-                  customerPausedTime.toString,
-                  movieId,
-                  movieName)))
-                customerRatingData.put(recordID, bufferAsJavaList(ArrayBuffer(
-                  customerID.toString,
-                  movieId,
-                  movieName,
-                  customerName,
-                  customerRating)))
-                customerQueueData.put(recordID, bufferAsJavaList(ArrayBuffer(
-                  customerID.toString,
-                  customerTimeWatchedInit.toString,
-                  customerName,
-                  movieId,
-                  movieName)))
-                movieGenreData.put(recordID, bufferAsJavaList(ArrayBuffer(
-                  movieGenre,
-                  movieReleaseYear,
-                  movieId,
-                  movieRunTime,
-                  movieName)))
-                messagesCount += 1
-                totalMessagesCount += 1
-                printf("\rMessages Count: " + totalMessagesCount)
-                if (messagesCount == config.batchSize || messagesCount == events) {
-                  logger.debug("Flushing batch size of :" + config.batchSize)
-                  movieDAO.batchLoadWatchHistory(config.keyspaceName, customerWatchHistoryData, config.async)
-                  movieDAO.batchLoadCustomerRatings(config.keyspaceName, customerRatingData, config.async)
-                  movieDAO.batchLoadCustomerQueue(config.keyspaceName, customerQueueData, config.async)
-                  movieDAO.batchLoadMovieGenre(config.keyspaceName, movieGenreData, config.async)
-                  messagesCount = 0
-                  customerWatchHistoryData.clear()
-                  customerRatingData.clear()
-                  customerQueueData.clear()
-                  movieGenreData.clear()
-                }
-              }
-              else {
-                // Individual Inserts
-                movieDAO.loadWatchHistory(config.keyspaceName,
-                  customerID,
-                  customerTimeWatchedInit.toString,
-                  customerPausedTime,
-                  movieId.toInt,
-                  movieName,
-                  config.async)
-                movieDAO.loadCustomerRatings(config.keyspaceName,
-                  customerID,
-                  movieId.toInt,
-                  movieName,
-                  customerName,
-                  customerRating.toFloat,
-                  config.async
-                )
-                movieDAO.loadCustomerQueue(config.keyspaceName,
-                  customerID,
-                  customerTimeWatchedInit.toString,
-                  customerName,
-                  movieId.toInt,
-                  movieName,
-                  config.async)
-                movieDAO.loadMovieGenre(config.keyspaceName,
-                  movieGenre,
-                  movieReleaseYear.toInt,
-                  movieId.toInt,
-                  movieRunTime.toInt,
-                  movieName,
-                  config.async)
-                totalMessagesCount += 1
-                printf("\rMessages Count: " + totalMessagesCount)
-              }
-
-            }
-            println()
-          }
-          totalMessagesCount = 0
-        }
 
         if(config.totalEvents.size == 0) {
-          logger.info("Defaulting inserts to 1000")
-          benchmarkInserts(1000)
+          val events = 10000
+          logger.info(s"Defaulting inserts to $events")
+          if (config.batchSize == 0) {
+            new InsertConcurrent(events, config).run()
+          } else {
+            new BatchInsertConcurrent(events, config).run()
+          }
           sys.exit(0)
         } else {
           config.totalEvents.foreach { events =>
-            benchmarkInserts(events)
+            if (config.batchSize == 0) {
+              new InsertConcurrent(events, config).run()
+            } else {
+              new BatchInsertConcurrent(events, config).run()
+            }
           }
-          sys.exit(0)
         }
+        sys.exit(0)
       } catch {
         case e: Exception => logger.error("Oops! something went wrong " + e.printStackTrace())
+      } finally {
+        movieDAO.close()
       }
     } else if (config.mode == "read") {
       /*
        * Performs random reads on inserted data
        */
-      val benchmarkReads = (numberOfReads: Int) => {
-        utils.time(s"reading $numberOfReads") {
-          logger.info("Using total number of customers data set: " + config.customerDataSetSize)
-          logger.info("Building query sets")
-          val movieInfo: Array[String] = movie.gen
-          val querySet = Map(
-            "query1" -> new String(s"SELECT movie_name, pt, ts FROM ${config.keyspaceName}.watch_history " +
-              "WHERE cid=CUSTID;"),
-            "query2" -> new String(s"SELECT movie_name, customer_name, rating " +
-              s"FROM ${config.keyspaceName}.customer_rating WHERE cid=CUSTID;"),
-            "query3" -> new String(s"SELECT customer_name, mid, movie_name " +
-              s"FROM ${config.keyspaceName}.customer_queue WHERE cid=CUSTID;"),
-            "query4" -> new String(s"SELECT movie_name, duration " +
-              s"FROM ${config.keyspaceName}.movies_genre WHERE genre='GENRE' AND release_year=RYEAR AND mid=MID;")
-          )
-          (1 to numberOfReads).foreach { readQueryCount =>
-            val randomQuery: String            = s"query${Random.nextInt(4) + 1}"
-            val movieId: String               = movieInfo(0)
-            val movieName: String             = movieInfo(1).replace("'", "")
-            val movieReleaseYear: String      = movieInfo(2)
-            val movieRunTime: String          = movieInfo(3)
-            val movieGenre: String            = movieInfo(4)
-            val query: String = randomQuery match {
-              case "query1" => querySet.get(randomQuery).get
-                .replaceAll("CUSTID", (Random.nextInt(config.customerDataSetSize)+ 1).toString)
-              case "query2" => querySet.get(randomQuery).get
-                .replaceAll("CUSTID", (Random.nextInt(config.customerDataSetSize)+ 1).toString)
-              case "query3" => querySet.get(randomQuery).get
-                .replaceAll("CUSTID", (Random.nextInt(config.customerDataSetSize)+ 1).toString)
-              case "query4" => querySet.get(randomQuery).get
-                .replaceAll("GENRE", movieGenre)
-                .replaceAll("RYEAR", movieReleaseYear)
-                .replaceAll("MID", movieId)
-            }
-            try {
-              movieDAO.findCQLByQuery(query)
-            } catch {
-              case ex: Exception => logger.warn(s"Failed executing query: '$query' reason: $ex")
-            }
-          }
-        }
-      }
-
-      logger.info("Init random reads")
+      logger.info("Initializing random reads")
       if (config.totalEvents.size == 0) {
-        logger.info("Defaulting reads to 100")
-        benchmarkReads(100)
+        logger.info("Defaulting reads to 1000")
+        new ReadsConcurrent(1000, config).run()
         sys.exit(0)
       } else {
         config.totalEvents.foreach{ totalReads =>
-          benchmarkReads(totalReads)
+          new ReadsConcurrent(totalReads, config).run()
         }
         sys.exit(0)
       }
@@ -292,7 +137,7 @@ object Driver extends App {
       /*
        * Execute pre-defined queries on inserted data
        */
-      logger.info("This part is not implemented")
+      logger.error("This part is not implemented")
       sys.exit(1)
     }
   }

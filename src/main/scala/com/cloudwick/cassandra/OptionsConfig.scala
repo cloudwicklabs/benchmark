@@ -13,5 +13,7 @@ case class OptionsConfig(
   batchSize: Int = 0,
   dropExistingTables: Boolean = false,
   replicationFactor: Int = 1,
-  async: Boolean = false
+  aSync: Boolean = false,
+  threadPoolSize: Int = 10,
+  threadCount: Int = 1
 )
