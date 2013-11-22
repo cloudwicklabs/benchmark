@@ -34,25 +34,25 @@ bin/run
 with out any arguments, `run` script will show the supported sub-commands that a user can run:
 
 ```
-Usage: run COMMAND
-Possible COMMAND(s)
+Usage: benchmark DRIVER
+Possible DRIVER(s)
   mongo       mongo benchmark driver
   solr        solr benchmark driver
   cassandra   cassandra benchmark driver
 ```
-where, each sub-command represents a driver interface to the applicaition that's invoked to benchmark.
+where, each sub-command represents a driver interface to the application that's used to benchmark.
 
-###To benchmark Mongo
+###Benchmarking Mongo
 Mongo benchmark driver can do the following:
 
-  * Benchmark inserts for given number of events
-  * Benchmark random reads
+  * Benchmark inserts for given number of events (also supports concurrency)
+  * Benchmark random reads (also supports concurrency)
   * Benchmark predefined aggregate queries on top of inserted data
 
 ```
-$bin/run mongo --help
+$bin/benchmark mongo --help
 
-mongo 0.5
+mongo 0.6
 Usage: mongo_benchmark [options] [<totalEvents>...]
 
   -m <insert|read|agg_query> | --mode <insert|read|agg_query>
@@ -69,6 +69,10 @@ Usage: mongo_benchmark [options] [<totalEvents>...]
         size of the session, defaults to: '50'
   -b <value> | --batchSize <value>
         size of the batch to flush to mongo instead of single inserts, defaults to: '0'
+  -t <value> | --threadsCount <value>
+        number of threads to use for write and read operations, defaults to: 1
+  -p <value> | --threadPoolSize <value>
+        size of the thread pool, defaults to: 10
   -d <value> | --dbName <value>
         name of the database to create|connect in mongo, defaults to: 'logs'
   -c <value> | --collectionName <value>
@@ -92,44 +96,49 @@ Usage: mongo_benchmark [options] [<totalEvents>...]
 ```
 
 
-Mongo Driver Example(s):
+Mongo Benchmark Example(s):
 
-1. To benchmark the inserts of 100000, 1000000 and 100000000 documents consecutively on regular mongo instance:
-
-    ```
-    bin/run mongo --mode insert 100000 1000000 100000000
-    ```
-
-2. To benchmark the inserts of 100000, 1000000 and 100000000 documents consecutively on sharded mongo setup (this
-requires sharded cluster configured and benchmark run from mongos):
+1. Inserts of 100000, 1000000 and 100000000 documents consecutively on single mongo instance:
 
     ```
-    bin/run mongo --mode insert 100000 1000000 100000000 --shard
+    bin/benchmark mongo --mode insert 100000 1000000 100000000
     ```
 
-3. To benchmark the inserts of 100000, 1000000 and 100000000 documents consecutively and also index the data once inserted:
+2. Inserts of 100000, 1000000 and 100000000 documents on sharded mongo cluster, this requires running the benchmark
+ from `mongos` (mongo router)
 
     ```
-    bin/run mongo --mode insert 100000 1000000 100000000 --indexData
+    bin/benchmark mongo --mode insert 100000 1000000 100000000 --shard
     ```
 
-4. Inserting data with indexing and custom batch size:
+3. Inserts of 100000, 1000000 and 100000000 documents consecutively and also indexes the data once inserted:
 
     ```
-    bin/run mongo --mode insert 100000 1000000 100000000 --indexData --batchSize 5000
+    bin/benchmark mongo --mode insert 100000 1000000 100000000 --indexData
+    ```
+
+4. Insert data with indexing and custom batch size:
+
+    ```
+    bin/benchmark mongo --mode insert 100000 1000000 100000000 --indexData --batchSize 5000
     ```
 
 5. Benchmark random reads of 10000, 100000 and 1000000 documents:
 
     ```
-    bin/run mongo --mode read 10000 100000 1000000
+    bin/benchmark mongo --mode read 10000 100000 1000000
     ```
 
 6. Perform aggregation queries on the inserted data
 
     ```
-    bin/run mongo --mode agg_query
+    bin/benchmark mongo --mode agg_query
     ```
+
+>
+> All the inserts and reads can be run concurrently using specified number of threads and threadPools, see options for
+> more details
+>
 
 **NOTE**: By default, mongo benchmark driver tries to connect to local instance of mongo, please use `--mongoURL` to
 specify the path where the mongo is listening. For more details on how to build the url please visit
@@ -141,7 +150,7 @@ Example connection URI scheme:
 mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
 ```
 
-###To benchmark Solr
+###Benchmarking Solr
 Solr benchmark driver can do the following:
 
   * Benchmark inserts for a given range of inputs
@@ -149,7 +158,7 @@ Solr benchmark driver can do the following:
   * Benchmark custom user input queries
 
 ```
-$bin/run solr --help
+$bin/benchmark solr --help
 
 solr 0.1
 Usage: index_logs [options] [<totalEvents>...]
@@ -177,7 +186,8 @@ Indexes log events to solr
         prints this usage text
 ```
 
-Before, benchmarking Solr you have to create a solr collection|core named `logs`. The following steps illustrate how to create a collection named logs on single solr core instance:
+Before, benchmarking Solr you have to create a solr collection|core named `logs`. The following steps illustrate how to
+create a collection named logs on single solr core instance:
 
 ```
 cp -r $SOLR_HOME/example $SOLR_HOME/logs
@@ -197,35 +207,35 @@ Solr Driver Example(s):
 1. To benchmark the inserts of 100000, 1000000 and 100000000 log events consecutively:
 
     ```
-    bin/run solr --mode insert 100000 1000000 100000000
+    bin/benchmark solr --mode insert 100000 1000000 100000000
     ```
 
 2. To benchmark the inserts of 100000, 1000000 and 100000000 log events consecutively while clearing existing index data:
 
     ```
-    bin/run solr --mode insert 100000 1000000 100000000 --cleanPreviousIndex
+    bin/benchmark solr --mode insert 100000 1000000 100000000 --cleanPreviousIndex
     ```
 
 3. To benchmark the inserts of 100000, 1000000 and 100000000 log events consecutively while clearing existing index data and
 also providing batch size using which the driver will flush the data:
 
     ```
-    bin/run solr --mode insert 100000 1000000 100000000 --cleanPreviousIndex --batchSize 10000
+    bin/benchmark solr --mode insert 100000 1000000 100000000 --cleanPreviousIndex --batchSize 10000
     ```
 
 4. To benchmark random reads
 
     ```
-    bin/run solr --mode read 10000 100000 1000000
+    bin/benchmark solr --mode read 10000 100000 1000000
     ```
 
 5. To execute custom queries and return specified number of documents
 
     ```
-    bin/run solr --mode search --query '*:*' --queryCount 20
+    bin/benchmark solr --mode search --query '*:*' --queryCount 20
     ```
 
-###To benchmark Cassandra
+###Benchmarking Cassandra
 Cassandra benchmark driver can do the following:
   
   * Benchmark inserts for a given range of inputs
@@ -236,12 +246,13 @@ Cassandra benchmark driver can do the following:
       * Automatically builds random queries to query the data from inserted 4 tables
 
 ```
-$bin/run cassandra --help
-cassandra 0.1
+$bin/benchmark cassandra --help
+
+cassandra 0.2
 Usage: cassandra_benchmark [options] [<totalEvents>...]
 
   -m <insert|read|query> | --mode <insert|read|query>
-        operation mode ('insert' will insert events, 'read' will perform random reads & 'query' performs pre-defined set of queries on the inserted data set)
+        operation mode ('insert' will insert log events, 'read' will perform random reads & 'query' performs pre-defined set of queries on the inserted data set)
   -n <value> | --cassNode <value>
         cassandra node to connect, defaults to: '127.0.0.1'
   <totalEvents>...
@@ -258,35 +269,45 @@ Usage: cassandra_benchmark [options] [<totalEvents>...]
         performs asynchronous inserts, defaults to: 'false'
   -r <value> | --replicationFactor <value>
         replication factor to use when inserting data, defaults to: '1'
+  -t <value> | --threadsCount <value>
+        number of threads to use for write and read operations, defaults to: 1
+  -p <value> | --threadPoolSize <value>
+        size of the thread pool, defaults to: 10
   --help
         prints this usage text
 ```
-Cassandra Driver Example(s):
+Cassandra Benchmark Example(s):
 
-1. To benchmark the inserts of 2500, 25000, 250000 of rows into 4 tables which is equivaluent to 10000, 100000, 1000000 insertions
+1. Inserts of 2500, 25000, 250000 of rows into 4 tables which is equivalent to 10000, 100000, 1000000 insertions
   
     ```
-    bin/run cassandra --mode insert 2500 25000 250000
+    bin/benchmark cassandra --mode insert 2500 25000 250000
     ```
-2. To benchmark the inserts of 2500, 25000, 250000 of rows into 4 tables using batch inserts with a batch size of 500
+2. Inserts of 2500, 25000, 250000 of rows into 4 tables using batch inserts with a batch size of 500
   
     ```
-    bin/run cassandra --mode insert 2500 25000 250000 --batchSize 500
+    bin/benchmark cassandra --mode insert 2500 25000 250000 --batchSize 500
     ```
-3. To benchmark the inserts of 2500, 25000, 250000 of rows into 4 tables using batch inserts with a batch size of 500 and also delete the previously existing data in the tables:
+3. Inserts of 2500, 25000, 250000 of rows into 4 tables using batch inserts with a batch size of 500 and also delete the
+previously existing data in the tables:
 
     ```
     bin/run cassandra --mode insert 2500 25000 250000 --batchSize 500 --dropExistingTables
     ```
-4. Perform inserts in async mode:
+4. Inserts in asynchronous mode, which does not required acknowledge back from cassandra:
   
     ```
     bin/run cassandra --mode insert 2500 25000 250000 --batchSize 500 --dropExistingTables --aSyncInserts
     ```
-5. Perform random reads
+5. Random reads
 
     ```
     bin/run cassandra --mode read 2500 25000 250000
     ```
+
+>
+> All inserts and read operations in cassandra benchmark driver can be made concurrent by specifying theads count and
+> thread poolsize, see options for more details
+>
 
 **Author**: [Ashrith](http://github.com/ashrithr)

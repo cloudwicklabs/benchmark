@@ -18,3 +18,4 @@ Solr
 Cassandra
 =========
 0.1 - Initial Commit
+0.2 - Adds support for concurrency

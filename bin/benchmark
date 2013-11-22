@@ -3,18 +3,20 @@
 SELF=`which "$0" 2> /dev/null`
 [ $? -gt 0 -a -f "$0" ] && SELF="./$0"
 
-VERSION="0.1"
+VERSION=0.1
 
 JAR="target/scala-2.10/benchmark-assembly-${VERSION}.jar"
 
 if [ ! -f ${JAR} ]; then
   echo "[Error]: Cannot find jar, compile using 'sbt assembly'"
+  echo "    This requires installing 'sbt'(version 0.13), use the following link"
+  echo "    to install sbt http://goo.gl/uVkvG"
   exit 1
 fi
 
 function usage () {
-  echo "Usage: `basename $0` COMMAND"
-  echo "Possible COMMAND(s)"
+  echo "Usage: `basename $0` DRIVER"
+  echo "Supported DRIVER(s)"
   echo "  mongo       mongo benchmark driver"
   echo "  solr        solr benchmark driver"
   echo "  cassandra   cassandra benchmark driver"

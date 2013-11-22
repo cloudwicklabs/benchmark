@@ -54,7 +54,7 @@ object Driver extends App {
       c.copy(batchSize = x)
     } text "size of the batch to flush to mongo instead of single inserts, defaults to: '0'"
     opt[Int]('t', "threadsCount") action { (x, c) =>
-      c.copy(threadsCount = x)
+      c.copy(threadCount = x)
     } text "number of threads to use for write and read operations, defaults to: 1"
     opt[Int]('p', "threadPoolSize") action { (x, c) =>
       c.copy(threadPoolSize = x)

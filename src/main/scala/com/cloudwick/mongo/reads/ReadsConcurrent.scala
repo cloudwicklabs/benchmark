@@ -18,18 +18,18 @@ class ReadsConcurrent (totalDocuments: Int, events: Long, config: OptionsConfig,
   lazy val logger = LoggerFactory.getLogger(getClass)
   val threadPool: ExecutorService = Executors.newFixedThreadPool(config.threadPoolSize)
   val finalCounter:AtomicLong = new AtomicLong(0L)
-  val queriesPerThread = events / config.threadsCount
+  val queriesPerThread = events / config.threadCount
 
   def run() = {
     try {
-      (1 to config.threadsCount).foreach { _ =>
-        logger.info("Initializing thread")
+      (1 to config.threadCount).foreach { threadCount =>
+        logger.info(s"Initializing thread$threadCount")
         threadPool.execute(new Reads(queriesPerThread, totalDocuments, finalCounter, config, mongo))
       }
     } finally {
       threadPool.shutdown()
     }
     while(!threadPool.isTerminated) {}
-    logger.info(s"Total read queries executed by ${config.threadsCount} threads: " + finalCounter)
+    logger.info(s"Total read queries executed by ${config.threadCount} threads: " + finalCounter)
   }
 }

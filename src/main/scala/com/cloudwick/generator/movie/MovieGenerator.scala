@@ -1,9 +1,7 @@
 package com.cloudwick.generator.movie
 
-import scala.io.Source
 import scala.util.Random
 import com.cloudwick.generator.utils._
-import scala.collection.mutable
 
 /**
  * Mocks movie
@@ -32,13 +30,13 @@ class MovieGenerator {
    * Builds a new map of titles of the form Map('movie_id', Map(year -> 'release_year', name -> "movie_title"))
    * @param movieTitlesFile Iterator of the file contents
    */
-  def parseToMap(movieTitlesFile: Iterator[String]): mutable.Map[String, Map[String, String]] = {
-    val map = mutable.Map[String, Map[String, String]]()
+  def parseToMap(movieTitlesFile: Iterator[String]): Map[String, Map[String, String]] = {
+    val map = scala.collection.mutable.Map[String, Map[String, String]]()
     for (line <- movieTitlesFile) {
       val id :: year :: name = line.split(',').toList
       map += id -> Map("year" -> year, "name" -> name.mkString)
     }
-    map
+    map.toMap
   }
 
   def gen: Array[String] = {

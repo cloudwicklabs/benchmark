@@ -42,14 +42,14 @@ class Insert(eventsStartRange: Int,
     val collection = mongo.initCollection(mongoClient, config.mongoDbName, config.mongoCollectionName)
     val totalDocs = eventsEndRange - eventsStartRange + 1
     try {
-      utils.time(s"inserting ${totalDocs} by thread $threadName") {
+      utils.time(s"inserting $totalDocs by thread $threadName") {
         (eventsStartRange to eventsEndRange).foreach { docCount =>
           mongo.addDocument(collection,
             mongo.makeMongoObject(logEventGen.eventGenerate, docCount),
             writeConcern)
         }
         logger.info(s"Documents inserted by $threadName is: $totalDocs from ($eventsStartRange) to " +
-          s"(${eventsEndRange})")
+          s"($eventsEndRange)")
       }
       counter.getAndAdd(totalDocs)
     } finally {
