@@ -1,14 +1,8 @@
 package com.cloudwick.mongo
 
-import com.cloudwick.generator.log.{IPGenerator,LogGenerator}
 import com.cloudwick.mongo.dao.LogDAO
-import com.mongodb.casbah.Imports._
-import scala.collection.mutable.ListBuffer
-import com.mongodb.casbah.commons.MongoDBObject
-import scala.util.Random
 import org.slf4j.LoggerFactory
 import com.cloudwick.generator.utils.Utils
-import java.util.concurrent.{Executors, ExecutorService}
 import com.cloudwick.mongo.inserts.{BatchInsertConcurrent, InsertConcurrent}
 import com.cloudwick.mongo.reads.ReadsConcurrent
 
@@ -53,7 +47,7 @@ object Driver extends App {
     opt[Int]('b', "batchSize") action { (x, c) =>
       c.copy(batchSize = x)
     } text "size of the batch to flush to mongo instead of single inserts, defaults to: '0'"
-    opt[Int]('t', "threadsCount") action { (x, c) =>
+    opt[Int]('t', "threadCount") action { (x, c) =>
       c.copy(threadCount = x)
     } text "number of threads to use for write and read operations, defaults to: 1"
     opt[Int]('p', "threadPoolSize") action { (x, c) =>
@@ -95,6 +89,9 @@ object Driver extends App {
     opt[Unit]("shard") action  { (_, c) =>
       c.copy(shardMode = true)
     } text "specifies whether to create a shard collection or a normal collection"
+    opt[Unit]("shardPreSplit") action  { (_, c) =>
+      c.copy(shardPreSplit = true)
+    } text "specifies whether to pre-split a shard and move the chunks to the available shards in the cluster"
     help("help") text "prints this usage text"
   }
 
@@ -126,8 +123,21 @@ object Driver extends App {
           val eventsSize = 10000
           logger.info("Defaulting inserts to " + eventsSize)
           if (config.shardMode) {
-            logger.info("Dropping existing data in the collection and rebuilding sharded collection")
-            mongo.initShardCollection(mongoClient, config.mongoDbName, config.mongoCollectionName)
+            if (config.shardPreSplit) {
+              logger.info("Dropping existing collection data")
+              mongo.dropCollection(collection)
+              logger.info("Initializing pre-splits and moving chunks around")
+              utils.time("pre-splitting chunks") {
+                mongo.initShardCollectionWithPreSplits(mongoClient,
+                  config.mongoDbName,
+                  config.mongoCollectionName,
+                  eventsSize)
+              }
+            } else {
+              logger.info("Dropping existing data in the collection and rebuilding sharded collection")
+              mongo.dropCollection(collection)
+              mongo.initShardCollection(mongoClient, config.mongoDbName, config.mongoCollectionName)
+            }
           } else {
             logger.info("Dropping existing data in the collection and creating new collection")
             mongo.dropCollection(collection)
@@ -146,9 +156,21 @@ object Driver extends App {
         } else {
           config.totalEvents.foreach{ events =>
             if (config.shardMode) {
-              logger.info("Dropping existing data in the collection and rebuilding sharded collection")
-              mongo.dropCollection(collection)
-              mongo.initShardCollection(mongoClient, config.mongoDbName, config.mongoCollectionName)
+              if (config.shardPreSplit) {
+                logger.info("Dropping existing collection data")
+                mongo.dropCollection(collection)
+                logger.info("Initializing pre-splits and moving chunks around")
+                utils.time("pre-splitting chunks") {
+                  mongo.initShardCollectionWithPreSplits(mongoClient,
+                    config.mongoDbName,
+                    config.mongoCollectionName,
+                    events)
+                }
+              } else {
+                logger.info("Dropping existing data in the collection and rebuilding sharded collection")
+                mongo.dropCollection(collection)
+                mongo.initShardCollection(mongoClient, config.mongoDbName, config.mongoCollectionName)
+              }
             } else {
               logger.info("Dropping existing data in the collection and createing a new collection")
               mongo.dropCollection(collection)

@@ -16,6 +16,7 @@ case class OptionsConfig(
   batchSize: Int = 0,
   indexData: Boolean = false,
   shardMode: Boolean = false,
+  shardPreSplit: Boolean = false,
   writeConcern: String = "none",
   readPreference: String = "primary",
   threadCount: Int = 1,

@@ -13,9 +13,7 @@ import scala.util.control.Breaks._
 class LogDAO(mongoConnectionUrl: String) {
   private val logger = LoggerFactory.getLogger(getClass)
   lazy val avgDocSize = 246 // in bytes
-  lazy val chunkSize = 512 * 1024 * 1024 // 500 MB in bytes
-  lazy val shardKey = "_id"
-  lazy val shardPrefix = "logs"
+  lazy val chunkSize = 64 * 1024 * 1024 // 64 MB in bytes
 
   /**
    * Initializes db connection to mongo & creates db and collection if does not exist
@@ -61,54 +59,61 @@ class LogDAO(mongoConnectionUrl: String) {
   }
 
   /**
-   * Creates shard collection & pre-splits chunks and moves them to respective shards (assumes the shard names to be
-   * logs001, logs002, ...)
+   * Creates shard collection & pre-splits chunks and moves them to respective shards (this requires that shards
+   * already exist on the cluster)
    * @param mongoClient mongo client to connect to
    * @param database name of the db to create
    * @param collection name of the collection to use
    * @param totalInserts total number of documents to pre-split chunks for
-   * @param numShards total number of shards to pre-split the collections to
-   */
-  /*
-    TODO get shard information from db.runCommand({'listShards': 1}) parse the result and get the shard names out
+   * @throws RuntimeException if there are no shards found in the cluster
    */
   def initShardCollectionWithPreSplits(mongoClient: MongoClient,
                                        database: String,
                                        collection: String,
-                                       totalInserts: Long = 2^31,
-                                       numShards: Int =2) = {
+                                       totalInserts: Long = 2^31) = {
     val adminDB = mongoClient("admin")
+    // get number of shards available
+    val result = adminDB.command(MongoDBObject("listShards" -> 1))
+    if (result.isEmpty) {
+      throw new RuntimeException("Fatal: No shards found")
+    }
+    val shards = result.get("shards").asInstanceOf[BasicDBList].map(x => x.asInstanceOf[DBObject].get("_id"))
+    val numShards = shards.size
+    logger.info("shards in the cluster: " + shards)
     // create shard collection
     adminDB.command(MongoDBObject("enableSharding" -> database))
     val shardKey = MongoDBObject("_id" -> 1)
-    adminDB.command(MongoDBObject("shardCOllection" -> s"$database.$collection", "key" -> shardKey))
+    adminDB.command(MongoDBObject("shardCollection" -> s"$database.$collection", "key" -> shardKey))
 
     val idsPerChunk = chunkSize / avgDocSize
     var id = 0 // min _id
     val maxId = totalInserts * 1.10 // increase by 10% of totalDocs expected (safe side)
     var count = 0
 
-    while (true) {
-      id += idsPerChunk
-      if (id > maxId) break()
-      // create a pre-split
-      // db.runCommand({split: "$db.$collection", middle: {$shardKey: $id}})
-      adminDB.command(MongoDBObject(
-        "split" -> s"$database.$collection",
-        "middle" -> MongoDBObject(
-          "_id" -> id
-        )
-      ))
+    logger.info(s"idsPerChunk: $idsPerChunk, minId: $id, maxId: $maxId, chunkSize: $chunkSize, avgDocSize: $avgDocSize")
 
-      val shardNum = count % numShards
-      // move chunk
-      // db.runCommand({moveChunk: "$db.$collection, find: {$shardKey: $id}, to: "$shard"})
-      adminDB.command(MongoDBObject(
-        "moveChunk" -> s"$database.$collection",
-        "find" -> MongoDBObject("_id" -> id),
-        "to" -> s"${shardPrefix}00${shardNum+1}"
-      ))
-      count += 1
+    breakable {
+      while (true) {
+        id += idsPerChunk
+        if (id > maxId) break()
+        // create a pre-split
+        // logger.info(s"Executing command: db.runCommand(\\{split: $database.$collection, middle: \\{_id: $id\\}\\})")
+        adminDB.command(MongoDBObject(
+          "split" -> s"$database.$collection",
+          "middle" -> MongoDBObject("_id" -> id)
+        ))
+
+        val shardNum = count % numShards
+        // move chunk
+        // logger.info(s"Executing command: db.runCommand(\\{moveChunk: $database.$collection, find: \\{_id: $id\\}," +
+        //  s" to: ${shards(shardNum)}\\})")
+        adminDB.command(MongoDBObject(
+          "moveChunk" -> s"$database.$collection",
+          "find" -> MongoDBObject("_id" -> id),
+          "to" -> shards(shardNum)
+        ))
+        count += 1
+      }
     }
   }
 
