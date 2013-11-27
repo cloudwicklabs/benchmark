@@ -12,7 +12,7 @@ import java.util
 import scala.collection.mutable.ArrayBuffer
 
 /**
- * Description goes here
+ * Batch inserts events into cassandra
  * @author ashrith 
  */
 class BatchInsert(eventsStartRange: Int,
@@ -30,6 +30,7 @@ class BatchInsert(eventsStartRange: Int,
   val customerQueueData = new util.HashMap[Integer, util.List[String]]()
   val movieGenreData = new util.HashMap[Integer, util.List[String]]()
   var batchMessagesCount: Int = 0
+  var totalRecordCounter: Int = eventsStartRange
 
   def threadName = Thread.currentThread().getName
 
@@ -41,6 +42,7 @@ class BatchInsert(eventsStartRange: Int,
     try {
       utils.time(s"inserting $totalRecords by thread $threadName") {
         (eventsStartRange to eventsEndRange).foreach { recordID =>
+          totalRecordCounter += 1
           batchMessagesCount += 1
 
           val cID: Int = Random.nextInt(customersSize) + 1
@@ -84,8 +86,10 @@ class BatchInsert(eventsStartRange: Int,
             movieRunTime,
             movieName)))
 
-          if (batchMessagesCount == config.batchSize || batchMessagesCount == totalRecords) {
-            // logger.debug("Flushing batch size of :" + config.batchSize)
+          // val configBatch: Boolean = (batchMessagesCount == config.batchSize)
+          // val totalBatch: Boolean = (totalRecordCounter == eventsEndRange)
+          if ( batchMessagesCount == config.batchSize || totalRecordCounter == eventsEndRange) {
+            logger.info("Flushing batch size of: " + batchMessagesCount)
             movieDAO.batchLoadWatchHistory(config.keyspaceName, customerWatchHistoryData, config.aSync)
             movieDAO.batchLoadCustomerRatings(config.keyspaceName, customerRatingData, config.aSync)
             movieDAO.batchLoadCustomerQueue(config.keyspaceName, customerQueueData, config.aSync)
@@ -98,7 +102,7 @@ class BatchInsert(eventsStartRange: Int,
             movieGenreData.clear()
           }
         }
-        logger.info(s"Records inserted by $threadName is : ${totalRecords * 4} from($eventsStartRange) to($eventsEndRange)")
+        logger.info(s"Records inserted by $threadName is : ${totalRecordCounter * 4} from($eventsStartRange) to($eventsEndRange)")
       }
       counter.getAndAdd(totalRecords)
     } finally {
