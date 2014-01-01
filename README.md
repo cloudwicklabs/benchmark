@@ -310,4 +310,7 @@ previously existing data in the tables:
 > thread poolsize, see options for more details
 >
 
-**Author**: [Ashrith](http://github.com/ashrithr)
+###License and Authors
+Authors: [Ashrith](http://github.com/ashrithr)
+
+Apache 2.0. Please see `LICENSE.txt`. All contents copyright (c) 2013, Cloudwick Labs.
