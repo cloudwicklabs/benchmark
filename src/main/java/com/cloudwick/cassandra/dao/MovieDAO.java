@@ -1,6 +1,7 @@
 package com.cloudwick.cassandra.dao;
 
 import com.datastax.driver.core.*;
+import com.datastax.driver.core.policies.DowngradingConsistencyRetryPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.*;
@@ -46,7 +47,10 @@ public class MovieDAO {
    * @param contactNodes list of contact nodes to the cluster information from
    */
   public MovieDAO(List<String> contactNodes) {
-    cluster = Cluster.builder().addContactPoints(contactNodes.toArray(new String[contactNodes.size()])).build();
+    cluster = Cluster.builder()
+              .addContactPoints(contactNodes.toArray(new String[contactNodes.size()]))
+              .withRetryPolicy(DowngradingConsistencyRetryPolicy.INSTANCE)
+              .build();
     Metadata metadata = cluster.getMetadata();
     logger.info("Connected to cluster: {}",metadata.getClusterName());
 
