@@ -27,8 +27,8 @@ Running
 To run the benchmark programs, use the wrapper script
 
 ```
-chmod +x bin/run
-bin/run
+chmod +x bin/benchmark
+bin/benchmark
 ```
 
 with out any arguments, `run` script will show the supported sub-commands that a user can run:
