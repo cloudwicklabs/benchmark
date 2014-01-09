@@ -21,6 +21,7 @@ class BatchInsert(eventsStartRange: Int,
                   customersMap: Map[Int, String],
                   config: OptionsConfig) extends Runnable {
   lazy val logger = LoggerFactory.getLogger(getClass)
+  lazy val retryBlock = new com.cloudwick.generator.utils.Retry[Unit](config.operationRetires)
   val utils = new Utils
   val movie = new MovieGenerator
 
@@ -35,6 +36,7 @@ class BatchInsert(eventsStartRange: Int,
   def threadName = Thread.currentThread().getName
 
   def run() = {
+    import retryBlock.retry
     val totalRecords = eventsEndRange - eventsStartRange + 1
     val movieDAO = new MovieDAO(config.cassandraNode)
     val customersSize = customersMap.size
@@ -90,10 +92,34 @@ class BatchInsert(eventsStartRange: Int,
           // val totalBatch: Boolean = (totalRecordCounter == eventsEndRange)
           if ( batchMessagesCount == config.batchSize || totalRecordCounter == eventsEndRange) {
             logger.info("Flushing batch size of: " + batchMessagesCount)
-            movieDAO.batchLoadWatchHistory(config.keyspaceName, customerWatchHistoryData, config.aSync)
-            movieDAO.batchLoadCustomerRatings(config.keyspaceName, customerRatingData, config.aSync)
-            movieDAO.batchLoadCustomerQueue(config.keyspaceName, customerQueueData, config.aSync)
-            movieDAO.batchLoadMovieGenre(config.keyspaceName, movieGenreData, config.aSync)
+            retry {
+              movieDAO.batchLoadWatchHistory(config.keyspaceName, customerWatchHistoryData, config.aSync)
+            } giveup {
+              case e: Exception =>
+                logger.debug("failed inserting batch to 'WatchHistory' after {} tries, reason: {}",
+                  config.operationRetires, e.printStackTrace())
+            }
+            retry {
+              movieDAO.batchLoadCustomerRatings(config.keyspaceName, customerRatingData, config.aSync)
+            } giveup {
+              case e: Exception =>
+                logger.debug("failed inserting batch to 'CustomerRating' after {} tries, reason: {}",
+                  config.operationRetires, e.printStackTrace())
+            }
+            retry {
+              movieDAO.batchLoadCustomerQueue(config.keyspaceName, customerQueueData, config.aSync)
+            } giveup {
+              case e: Exception =>
+                logger.debug("failed inserting batch to 'CustomerQueue' after {} tries, reason: {}",
+                  config.operationRetires, e.printStackTrace())
+            }
+            retry {
+              movieDAO.batchLoadMovieGenre(config.keyspaceName, movieGenreData, config.aSync)
+            } giveup {
+              case e: Exception =>
+                logger.debug("failed inserting batch to 'MovieGenre' after {} tries, reason: {}",
+                  config.operationRetires, e.printStackTrace())
+            }
             // reset counters and batch holders
             batchMessagesCount = 0
             customerWatchHistoryData.clear()

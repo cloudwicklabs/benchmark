@@ -1,6 +1,8 @@
 package com.cloudwick.cassandra.dao;
 
 import com.datastax.driver.core.*;
+import com.datastax.driver.core.exceptions.NoHostAvailableException;
+import com.datastax.driver.core.policies.ConstantReconnectionPolicy;
 import com.datastax.driver.core.policies.DowngradingConsistencyRetryPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,7 +31,11 @@ public class MovieDAO {
    * @param contactNode a cassandra node used to fetch the cluster information from
    */
   public MovieDAO(String contactNode) {
-    cluster = Cluster.builder().addContactPoint(contactNode).build();
+    cluster = Cluster.builder()
+        .addContactPoint(contactNode)
+        .withRetryPolicy(DowngradingConsistencyRetryPolicy.INSTANCE)
+        .withReconnectionPolicy(new ConstantReconnectionPolicy(100L))
+        .build();
 
     Metadata metadata = cluster.getMetadata();
     logger.info("Connected to cluster: %s\n", metadata.getClusterName());
@@ -47,18 +53,27 @@ public class MovieDAO {
    * @param contactNodes list of contact nodes to the cluster information from
    */
   public MovieDAO(List<String> contactNodes) {
-    cluster = Cluster.builder()
-              .addContactPoints(contactNodes.toArray(new String[contactNodes.size()]))
-              .withRetryPolicy(DowngradingConsistencyRetryPolicy.INSTANCE)
-              .build();
-    Metadata metadata = cluster.getMetadata();
-    logger.info("Connected to cluster: {}",metadata.getClusterName());
+    try {
+      cluster = Cluster.builder()
+          .addContactPoints(contactNodes.toArray(new String[contactNodes.size()]))
+          .withRetryPolicy(DowngradingConsistencyRetryPolicy.INSTANCE)
+          .withReconnectionPolicy(new ConstantReconnectionPolicy(100L))
+          .build();
 
-    for ( Host host : metadata.getAllHosts() ) {
-      logger.info("DataCenter: {}; Host: {}; Rack: {}\n",
-          host.getDatacenter(), host.getAddress(), host.getRack());
+      Metadata metadata = cluster.getMetadata();
+      logger.info("Connected to cluster: {}", metadata.getClusterName());
+
+      for ( Host host : metadata.getAllHosts() ) {
+        logger.info("DataCenter: {}; Host: {}; Rack: {}\n",
+            host.getDatacenter(), host.getAddress(), host.getRack());
+      }
+      this.connect();
+    } catch (NoHostAvailableException e) {
+      e.printStackTrace();
+      throw new RuntimeException(e);
+    } catch (Exception e) {
+      logger.error("Exception in CassandraConnection class: {}", e);
     }
-    this.connect();
   }
 
   /**

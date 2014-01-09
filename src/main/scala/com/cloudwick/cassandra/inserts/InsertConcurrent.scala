@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicLong
 
 
 /**
- * Description goes here
+ * Inserts events into cassandra using concurrent connections
  * @author ashrith 
  */
 class InsertConcurrent(events: Long, config: OptionsConfig) extends Runnable {
@@ -26,7 +26,7 @@ class InsertConcurrent(events: Long, config: OptionsConfig) extends Runnable {
 
 
   def buildCustomersMap = {
-    logger.info("Building a customer data set of size: " + config.customerDataSetSize)
+    logger.info("Building a customer data set of size: {}", config.customerDataSetSize)
     (1 to config.customerDataSetSize).foreach { custId =>
       customers += custId -> person.gen
     }
@@ -37,7 +37,7 @@ class InsertConcurrent(events: Long, config: OptionsConfig) extends Runnable {
     utils.time(s"inserting $events") {
       try {
         (1 to config.threadCount).foreach { threadCount =>
-          logger.info("Initializing thread" + threadCount)
+          logger.info("Initializing thread {}", threadCount)
           threadPool.execute(
             new Insert(
               messagesRange(threadCount-1), // start range for thread
@@ -52,7 +52,7 @@ class InsertConcurrent(events: Long, config: OptionsConfig) extends Runnable {
         threadPool.shutdown()
       }
       while(!threadPool.isTerminated) {}
-      logger.info(s"Total documents processed by ${config.threadCount} threads: $finalCounter")
+      logger.info("Total documents processed by {} threads: {}", config.threadCount, finalCounter)
     }
   }
 }

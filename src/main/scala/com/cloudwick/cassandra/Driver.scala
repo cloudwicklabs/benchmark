@@ -16,7 +16,7 @@ object Driver extends App {
    * Command line option parser
    */
   val optionsParser = new scopt.OptionParser[OptionsConfig]("cassandra_benchmark") {
-    head("cassandra", "0.2")
+    head("cassandra", "0.4")
     opt[String]('m', "mode") required() valueName "<insert|read|query>" action { (x, c) =>
       c.copy(mode = x)
     } validate { x: String =>
@@ -50,6 +50,9 @@ object Driver extends App {
     opt[Int]('r', "replicationFactor") action { (x, c) =>
       c.copy(replicationFactor = x)
     } text "replication factor to use when inserting data, defaults to: '1'"
+    opt[Int]('o', "operationRetries") action { (x, c) =>
+      c.copy(operationRetires = x)
+    } text "number of times a operation has to retired before exhausting, defaults to: '10'"
     opt[Int]('t', "threadsCount") action { (x, c) =>
       c.copy(threadCount = x)
     } text "number of threads to use for write and read operations, defaults to: 1"
@@ -60,7 +63,7 @@ object Driver extends App {
   }
 
   optionsParser.parse(args, OptionsConfig()) map { config =>
-    logger.info(s"Successfully parsed command line options: $config")
+    logger.info("Successfully parsed command line options: {}", config)
 
     /*
      * Initialize data generators and cassandra connection
@@ -84,19 +87,19 @@ object Driver extends App {
       try {
         if (config.dropExistingTables) {
           tableList.foreach { table =>
-            logger.info(s"Dropping table: $table")
+            logger.info("Dropping table: {}", table)
             movieDAO.dropTable(config.keyspaceName, table)
           }
         }
 
-        logger.info(s"Creating keyspace ${config.keyspaceName}")
+        logger.info("Creating keyspace {}", config.keyspaceName)
         movieDAO.createSchema(config.keyspaceName, config.replicationFactor)
 
         logger.info("Initializing Data Generator")
 
         if(config.totalEvents.size == 0) {
           val events = 10000
-          logger.info(s"Defaulting inserts to $events")
+          logger.info("Defaulting inserts to {}", events)
           if (config.batchSize == 0) {
             new InsertConcurrent(events, config).run()
           } else {
@@ -114,7 +117,7 @@ object Driver extends App {
         }
         sys.exit(0)
       } catch {
-        case e: Exception => logger.error("Oops! something went wrong " + e.printStackTrace())
+        case e: Exception => logger.error("Oops! something went wrong, reason: {}", e.printStackTrace())
       } finally {
         movieDAO.close()
       }

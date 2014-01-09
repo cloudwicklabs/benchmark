@@ -8,7 +8,7 @@ import com.cloudwick.generator.utils.Utils
 import com.cloudwick.generator.movie.Person
 
 /**
- * Description goes here
+ * Batch inserts events into cassandra using concurrent connections
  * @author ashrith 
  */
 class BatchInsertConcurrent (events: Long, config: OptionsConfig) extends Runnable {
@@ -25,7 +25,7 @@ class BatchInsertConcurrent (events: Long, config: OptionsConfig) extends Runnab
 
 
   def buildCustomersMap = {
-    logger.info("Building a customer data set of size: " + config.customerDataSetSize)
+    logger.info("Building a customer data set of size: {}", config.customerDataSetSize)
     (1 to config.customerDataSetSize).foreach { custId =>
       customers += custId -> person.gen
     }
@@ -51,7 +51,7 @@ class BatchInsertConcurrent (events: Long, config: OptionsConfig) extends Runnab
         threadPool.shutdown()
       }
       while(!threadPool.isTerminated) {}
-      logger.info(s"Total documents processed by ${config.threadCount} threads: $finalCounter")
+      logger.info("Total documents processed by {} threads: {}", config.threadCount, finalCounter)
     }
   }
 }
