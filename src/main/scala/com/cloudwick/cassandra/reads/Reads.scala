@@ -18,6 +18,7 @@ class Reads(numOfReads: Long,
             customerDataSetSize: Int,
             config: OptionsConfig) extends Runnable {
   lazy val logger = LoggerFactory.getLogger(getClass)
+  lazy val retryBlock = new com.cloudwick.generator.utils.Retry[Unit](config.operationRetires)
   val utils = new Utils
   val movie = new MovieGenerator
   val movieDAO = new com.cloudwick.cassandra.dao.MovieDAO(config.cassandraNode)
@@ -25,6 +26,7 @@ class Reads(numOfReads: Long,
   def threadName = Thread.currentThread().getName
 
   def run() = {
+    import retryBlock.retry
     utils.time(s"reading $numOfReads by thread $threadName") {
       val movieInfo: Array[String] = movie.gen
       try {
@@ -45,10 +47,10 @@ class Reads(numOfReads: Long,
               .replaceAll("RYEAR", movieReleaseYear)
               .replaceAll("MID", movieId)
           }
-          try {
+          retry {
             movieDAO.findCQLByQuery(query)
-          } catch {
-            case ex: Exception => logger.warn(s"Failed executing query: '$query' reason: $ex")
+          } giveup {
+            case ex: Exception => logger.debug("Failed executing query: '{}' reason: {}", query, ex.printStackTrace())
           }
         }
         counter.getAndAdd(numOfReads)

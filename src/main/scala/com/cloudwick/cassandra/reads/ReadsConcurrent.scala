@@ -34,7 +34,7 @@ class ReadsConcurrent(totalEvents: Long, config: OptionsConfig) extends Runnable
   def run() = {
     try {
       (1 to config.threadCount).foreach { threadCount =>
-        logger.info(s"Initializing thread$threadCount")
+        logger.info("Initializing thread{}", threadCount)
         threadPool.execute(
           new Reads(queriesPerThread, buildQuerySet, finalCounter, customerDataSetSize, config)
         )
@@ -43,6 +43,6 @@ class ReadsConcurrent(totalEvents: Long, config: OptionsConfig) extends Runnable
       threadPool.shutdown()
     }
     while(!threadPool.isTerminated) {}
-    logger.info(s"Total read queries executed by ${config.threadCount} threads: $finalCounter")
+    logger.info("Total read queries executed by {} threads: {}", config.threadCount, finalCounter)
   }
 }

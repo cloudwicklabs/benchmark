@@ -19,3 +19,4 @@ Cassandra
 0.1 - Initial Commit
 0.2 - Adds support for concurrency
 0.3 - Adds support for downgrading consistency if writes are failing
+0.4 - Adds support for operation retry & support for Reconnection Policy
