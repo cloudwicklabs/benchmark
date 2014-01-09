@@ -18,8 +18,8 @@ object Build extends Build {
     val compile = Seq(
       "org.mongodb" %% "casbah" % "2.6.3",
       "commons-logging" % "commons-logging" % "1.1.1",
-      "org.slf4j" % "slf4j-simple" % "1.7.5",
       "org.slf4j" % "slf4j-api" % "1.7.5",
+      "ch.qos.logback" % "logback-classic" % "1.0.13",
       "com.github.scopt" %% "scopt" % "3.1.0",
       "org.apache.solr" % "solr-solrj" % "4.3.1",
       "jp.sf.amateras.solr.scala" %% "solr-scala-client" % "0.0.8",
