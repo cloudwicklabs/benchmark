@@ -242,13 +242,14 @@ Cassandra benchmark driver can do the following:
       * Generates random movie dataset events
       * Can insert in both `batch` mode and `normal` mode, batch mode automatically batches a set of events and sends them to cassandra
       * supports both `sync` and `async` operations, *async* does not wait for the cassandra to give the ack back
+      * supports operation retries, default to 10 retries for operation before exhausting
   * Benchmark random reads
       * Automatically builds random queries to query the data from inserted 4 tables
 
 ```
 $bin/benchmark cassandra --help
 
-cassandra 0.2
+cassandra 0.4
 Usage: cassandra_benchmark [options] [<totalEvents>...]
 
   -m <insert|read|query> | --mode <insert|read|query>
@@ -269,6 +270,8 @@ Usage: cassandra_benchmark [options] [<totalEvents>...]
         performs asynchronous inserts, defaults to: 'false'
   -r <value> | --replicationFactor <value>
         replication factor to use when inserting data, defaults to: '1'
+  -o <value> | --operationRetries <value>
+        number of times a operation has to retired before exhausting, defaults to: '10'
   -t <value> | --threadsCount <value>
         number of threads to use for write and read operations, defaults to: 1
   -p <value> | --threadPoolSize <value>

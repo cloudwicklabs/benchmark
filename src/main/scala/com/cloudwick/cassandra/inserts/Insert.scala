@@ -123,8 +123,7 @@ class Insert(eventsStartRange: Int,
                 config.operationRetires, e.printStackTrace())
           }
         }
-        logger.info("Records inserted by {} is : {} from({}) to({})",
-          threadName, totalRecords * 4, eventsStartRange, eventsEndRange)
+        logger.info(s"Records inserted by ${threadName} is : ${totalRecords * 4} from(${eventsStartRange}) to(${eventsEndRange})")
       }
       counter.getAndAdd(totalRecords)
     } finally {
