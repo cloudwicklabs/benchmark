@@ -19,21 +19,25 @@ class ReadsConcurrent (totalDocuments: Int, events: Long, config: OptionsConfig,
   lazy val logger = LoggerFactory.getLogger(getClass)
   val threadPool: ExecutorService = Executors.newFixedThreadPool(config.threadPoolSize)
   val finalCounter:AtomicLong = new AtomicLong(0L)
-  val queriesPerThread = events / config.threadCount
+  val queriesPerThread = events / config.threadsCount
   val utils = new Utils
 
   def run() = {
     utils.time(s"reading $events") {
       try {
-        (1 to config.threadCount).foreach { threadCount =>
-          logger.info(s"Initializing thread$threadCount")
+        (1 to config.threadsCount).foreach { threadCount =>
+          logger.debug("Initializing thread {}", threadCount)
           threadPool.execute(new Reads(queriesPerThread, totalDocuments, finalCounter, config, mongo))
         }
       } finally {
         threadPool.shutdown()
       }
-      while(!threadPool.isTerminated) {}
-      logger.info(s"Total read queries executed by ${config.threadCount} threads: " + finalCounter)
+      while(!threadPool.isTerminated) {
+        // print every 10 seconds how many documents have been inserted
+        Thread.sleep(10 * 1000)
+        println("Documents read: " + finalCounter)
+      }
+      logger.info("Total read queries executed by {} thread(s): {}", config.threadsCount, finalCounter)
     }
   }
 }

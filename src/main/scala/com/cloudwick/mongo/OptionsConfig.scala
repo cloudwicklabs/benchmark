@@ -6,7 +6,7 @@ package com.cloudwick.mongo
  */
 case class OptionsConfig(
   mode: String = "insert",
-  mongoURL: String = "mongodb://localhost:27017/" ,
+  mongoURL: String = "mongodb://localhost:27017/",
   eventsPerSec: Int = 1,
   totalEvents: Seq[Int] = Seq(),
   ipSessionCount: Int = 25,
@@ -19,6 +19,7 @@ case class OptionsConfig(
   shardPreSplit: Boolean = false,
   writeConcern: String = "none",
   readPreference: String = "primary",
-  threadCount: Int = 1,
+  operationRetires: Int = 10,
+  threadsCount: Int = 1,
   threadPoolSize: Int = 10
 )

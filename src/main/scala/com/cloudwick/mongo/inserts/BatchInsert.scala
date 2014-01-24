@@ -24,6 +24,7 @@ class BatchInsert(eventsStartRange: Int,
                   config: OptionsConfig,
                   mongo: LogDAO) extends Runnable {
   lazy val logger = LoggerFactory.getLogger(getClass)
+  lazy val retryBlock = new com.cloudwick.generator.utils.Retry[Unit](config.operationRetires)
 
   var batchMessagesCount: Int = 0
   val batch: ListBuffer[MongoDBObject] = new ListBuffer[MongoDBObject]
@@ -41,26 +42,32 @@ class BatchInsert(eventsStartRange: Int,
   def threadName = Thread.currentThread().getName
 
   def run() = {
+    import retryBlock.retry
     val mongoClient = mongo.initialize
     val collection = mongo.initCollection(mongoClient, config.mongoDbName, config.mongoCollectionName)
     val totalDocs = eventsEndRange - eventsStartRange + 1
     try {
-      utils.time(s"inserting $totalDocs by thread $threadName ") {
-        (eventsStartRange to eventsEndRange).foreach { docCount =>
-          batchMessagesCount += 1
-          batch += mongo.makeMongoObject(logEventGen.eventGenerate, docCount)
+      (eventsStartRange to eventsEndRange).foreach { docCount =>
+        batchMessagesCount += 1
+        batch += mongo.makeMongoObject(logEventGen.eventGenerate, docCount)
 
-          if (batchMessagesCount == config.batchSize || batchMessagesCount == totalDocs) {
-            // logger.debug("Sending a batch to mongo for insert " + config.batchSize)
+        if (batchMessagesCount == config.batchSize || batchMessagesCount == totalDocs) {
+          // logger.debug("Sending a batch to mongo for insert " + config.batchSize)
+          retry {
             mongo.batchAdd(collection, batch, writeConcern)
-            batchMessagesCount = 0
-            batch.clear()
+          } giveup {
+            case e: Exception =>
+              logger.debug("failed inserting batch to mongo collection after {} tries, reason: {}",
+                config.operationRetires, e.printStackTrace())
           }
+          counter.getAndAdd(batchMessagesCount)
+          batchMessagesCount = 0
+          batch.clear()
         }
-        logger.info(s"Documents inserted (with batchSize of ${config.batchSize}) by $threadName is: $totalDocs from" +
-          s"($eventsStartRange) to ($eventsEndRange)")
       }
-      counter.getAndAdd(totalDocs)
+      logger.debug(s"Documents inserted (with batchSize of ${config.batchSize}) by $threadName is: $totalDocs from" +
+        s"($eventsStartRange) to ($eventsEndRange)")
+      // counter.getAndAdd(totalDocs)
     } finally {
       mongo.close(mongoClient)
     }

@@ -23,22 +23,29 @@ class Reads(numOfReads: Long,
             config: OptionsConfig,
             mongo: LogDAO) extends Runnable {
   lazy val logger = LoggerFactory.getLogger(getClass)
+  lazy val retryBlock = new com.cloudwick.generator.utils.Retry[Unit](config.operationRetires)
 
   val utils = new Utils
 
   def threadName = Thread.currentThread().getName
 
   def run() = {
+    import retryBlock.retry
     val mongoClient = mongo.initialize
     val collection = mongo.initCollection(mongoClient, config.mongoDbName, config.mongoCollectionName)
     try {
-      utils.time(s"reading $numOfReads by thread $threadName") {
-        (1L to numOfReads).foreach { _ =>
-          mongo.findDocument(collection, MongoDBObject("_id" -> Random.nextInt(totalDocs)))
+      (1L to numOfReads).foreach { _ =>
+        val docId = Random.nextInt(totalDocs)
+        retry {
+          mongo.findDocument(collection, MongoDBObject("_id" -> docId))
+        } giveup {
+          case ex: Exception =>
+            logger.debug("Failed finding document with id : '{}' reason: {}", docId, ex.printStackTrace())
         }
-        logger.info(s"Read queries executed by $threadName is: $numOfReads")
+        counter.getAndIncrement
       }
-      counter.getAndAdd(numOfReads)
+      logger.debug("Read queries executed by {} is: {}", threadName, numOfReads)
+      // counter.getAndAdd(numOfReads)
     } finally {
       mongo.close(mongoClient)
     }

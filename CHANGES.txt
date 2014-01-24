@@ -9,6 +9,7 @@ Mongo
 0.4 - Shows index times as a separate entity
 0.5 - Add support for read preference
 0.6 - Adds support for concurrency
+0.7 - Adds support for operation retry & Modifies output to show number of documents inserted
 
 Solr
 ====
