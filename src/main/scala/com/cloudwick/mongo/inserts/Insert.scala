@@ -23,6 +23,7 @@ class Insert(eventsStartRange: Int,
              config: OptionsConfig,
              mongo: LogDAO) extends Runnable {
   lazy val logger = LoggerFactory.getLogger(getClass)
+  lazy val retryBlock = new com.cloudwick.generator.utils.Retry[Unit](config.operationRetires)
 
   val utils = new Utils
   val ipGenerator = new IPGenerator(config.ipSessionCount, config.ipSessionLength)
@@ -38,20 +39,26 @@ class Insert(eventsStartRange: Int,
   def threadName = Thread.currentThread().getName
 
   def run() = {
+    import retryBlock.retry
     val mongoClient = mongo.initialize
     val collection = mongo.initCollection(mongoClient, config.mongoDbName, config.mongoCollectionName)
     val totalDocs = eventsEndRange - eventsStartRange + 1
     try {
-      utils.time(s"inserting $totalDocs by thread $threadName") {
-        (eventsStartRange to eventsEndRange).foreach { docCount =>
+      (eventsStartRange to eventsEndRange).foreach { docCount =>
+        retry {
           mongo.addDocument(collection,
             mongo.makeMongoObject(logEventGen.eventGenerate, docCount),
             writeConcern)
+        } giveup {
+          case e: Exception =>
+            logger.debug("failed inserting to document to mongo collection after {} tries, reason: {}",
+              config.operationRetires, e.printStackTrace())
         }
-        logger.info(s"Documents inserted by $threadName is: $totalDocs from ($eventsStartRange) to " +
-          s"($eventsEndRange)")
+        counter.getAndIncrement
       }
-      counter.getAndAdd(totalDocs)
+      logger.debug(s"Documents inserted by $threadName is: $totalDocs from ($eventsStartRange) to " +
+        s"($eventsEndRange)")
+      // counter.getAndAdd(totalDocs)
     } finally {
       mongo.close(mongoClient)
     }

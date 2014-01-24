@@ -19,14 +19,14 @@ class BatchInsertConcurrent(events: Long, config: OptionsConfig, mongo: LogDAO) 
   lazy val utils = new Utils
   val threadPool: ExecutorService = Executors.newFixedThreadPool(config.threadPoolSize)
   val finalCounter:AtomicLong = new AtomicLong(0L)
-  val messagesPerThread: Int = (events / config.threadCount).toInt
+  val messagesPerThread: Int = (events / config.threadsCount).toInt
   val messagesRange = Range(0, events.toInt, messagesPerThread)
 
   def run() = {
     utils.time(s"inserting ${events}") {
       try {
-        (1 to config.threadCount).foreach { threadCount =>
-          logger.info("Initializing thread")
+        (1 to config.threadsCount).foreach { threadCount =>
+          logger.debug("Initializing thread" + threadCount)
           threadPool.execute(
             new BatchInsert(
               messagesRange(threadCount - 1), // start range of thread
@@ -38,8 +38,11 @@ class BatchInsertConcurrent(events: Long, config: OptionsConfig, mongo: LogDAO) 
       } finally {
         threadPool.shutdown()
       }
-      while(!threadPool.isTerminated) {}
-      logger.info(s"Total documents processed by ${config.threadCount} threads: " + finalCounter)
+      while(!threadPool.isTerminated) {
+        Thread.sleep(10 * 1000)
+        println("Documents inserted: " + finalCounter)
+      }
+      logger.info("Total documents processed by {} thread(s): {}", config.threadsCount, finalCounter)
     }
   }
 }

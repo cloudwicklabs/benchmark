@@ -52,7 +52,7 @@ Mongo benchmark driver can do the following:
 ```
 $bin/benchmark mongo --help
 
-mongo 0.6
+mongo 0.7
 Usage: mongo_benchmark [options] [<totalEvents>...]
 
   -m <insert|read|agg_query> | --mode <insert|read|agg_query>
@@ -91,6 +91,10 @@ Usage: mongo_benchmark [options] [<totalEvents>...]
         index data on 'response_code' and 'request_page' after inserting, defaults to: 'false'
   --shard
         specifies whether to create a shard collection or a normal collection
+  --shardPreSplit
+        specifies whether to pre-split a shard and move the chunks to the available shards in the cluster
+  -o <value> | --operationRetries <value>
+        number of times a operation has to retired before exhausting, defaults to: '10'
   --help
         prints this usage text
 ```

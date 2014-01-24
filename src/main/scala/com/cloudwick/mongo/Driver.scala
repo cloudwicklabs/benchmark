@@ -18,7 +18,7 @@ object Driver extends App {
    * Command line option parser
    */
   val optionsParser = new scopt.OptionParser[OptionsConfig]("mongo_benchmark") {
-    head("mongo", "0.6")
+    head("mongo", "0.7")
     opt[String]('m', "mode") required() valueName "<insert|read|agg_query>" action { (x, c) =>
       c.copy(mode = x)
     } validate { x: String =>
@@ -47,8 +47,8 @@ object Driver extends App {
     opt[Int]('b', "batchSize") action { (x, c) =>
       c.copy(batchSize = x)
     } text "size of the batch to flush to mongo instead of single inserts, defaults to: '0'"
-    opt[Int]('t', "threadCount") action { (x, c) =>
-      c.copy(threadCount = x)
+    opt[Int]('t', "threadsCount") action { (x, c) =>
+      c.copy(threadsCount = x)
     } text "number of threads to use for write and read operations, defaults to: 1"
     opt[Int]('p', "threadPoolSize") action { (x, c) =>
       c.copy(threadPoolSize = x)
@@ -92,6 +92,9 @@ object Driver extends App {
     opt[Unit]("shardPreSplit") action  { (_, c) =>
       c.copy(shardPreSplit = true)
     } text "specifies whether to pre-split a shard and move the chunks to the available shards in the cluster"
+    opt[Int]('o', "operationRetries") action { (x, c) =>
+      c.copy(operationRetires = x)
+    } text "number of times a operation has to retired before exhausting, defaults to: '10'"
     help("help") text "prints this usage text"
   }
 
@@ -250,7 +253,7 @@ object Driver extends App {
       }
 
       val pipeline6 = mongo.buildQuerySix
-      logger.info("Query 5: Top Browsers")
+      logger.info("Query 6: Top Browsers")
       utils.time("aggregate query 6") {
         mongo.aggregationResult(mongoClient, config.mongoDbName, config.mongoCollectionName, pipeline6)
       }
