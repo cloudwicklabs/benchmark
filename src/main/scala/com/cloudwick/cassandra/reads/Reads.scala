@@ -27,36 +27,34 @@ class Reads(numOfReads: Long,
 
   def run() = {
     import retryBlock.retry
-    utils.time(s"reading $numOfReads by thread $threadName") {
-      val movieInfo: Array[String] = movie.gen
-      try {
-        (1L to numOfReads).foreach { readQueryCount =>
-          val randomQuery = s"query${Random.nextInt(4)+1}"
-          val movieId = movieInfo(0)
-          val movieReleaseYear = movieInfo(2)
-          val movieGenre = movieInfo(4)
-          val query: String = randomQuery match {
-            case "query1" => querySet.get(randomQuery).get
-              .replaceAll("CUSTID", (Random.nextInt(customerDataSetSize)+ 1).toString)
-            case "query2" => querySet.get(randomQuery).get
-              .replaceAll("CUSTID", (Random.nextInt(customerDataSetSize)+ 1).toString)
-            case "query3" => querySet.get(randomQuery).get
-              .replaceAll("CUSTID", (Random.nextInt(customerDataSetSize)+ 1).toString)
-            case "query4" => querySet.get(randomQuery).get
-              .replaceAll("GENRE", movieGenre)
-              .replaceAll("RYEAR", movieReleaseYear)
-              .replaceAll("MID", movieId)
-          }
-          retry {
-            movieDAO.findCQLByQuery(query)
-          } giveup {
-            case ex: Exception => logger.debug("Failed executing query: '{}' reason: {}", query, ex.printStackTrace())
-          }
+    val movieInfo: Array[String] = movie.gen
+    try {
+      (1L to numOfReads).foreach { readQueryCount =>
+        val randomQuery = s"query${Random.nextInt(4)+1}"
+        val movieId = movieInfo(0)
+        val movieReleaseYear = movieInfo(2)
+        val movieGenre = movieInfo(4)
+        val query: String = randomQuery match {
+          case "query1" => querySet.get(randomQuery).get
+            .replaceAll("CUSTID", (Random.nextInt(customerDataSetSize)+ 1).toString)
+          case "query2" => querySet.get(randomQuery).get
+            .replaceAll("CUSTID", (Random.nextInt(customerDataSetSize)+ 1).toString)
+          case "query3" => querySet.get(randomQuery).get
+            .replaceAll("CUSTID", (Random.nextInt(customerDataSetSize)+ 1).toString)
+          case "query4" => querySet.get(randomQuery).get
+            .replaceAll("GENRE", movieGenre)
+            .replaceAll("RYEAR", movieReleaseYear)
+            .replaceAll("MID", movieId)
         }
-        counter.getAndAdd(numOfReads)
-      } finally {
-          movieDAO.close()
+        retry {
+          movieDAO.findCQLByQuery(query)
+        } giveup {
+          case ex: Exception => logger.debug("Failed executing query: '{}' reason: {}", query, ex.printStackTrace())
+        }
+        counter.getAndIncrement
       }
+    } finally {
+      movieDAO.close()
     }
   }
 }

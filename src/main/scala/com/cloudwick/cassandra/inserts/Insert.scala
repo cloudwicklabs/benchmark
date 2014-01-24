@@ -31,46 +31,28 @@ class Insert(eventsStartRange: Int,
     val movieDAO = new MovieDAO(config.cassandraNode)
     val customersSize = customersMap.size
     try {
-      utils.time(s"inserting $totalRecords by thread $threadName") {
-        (eventsStartRange to eventsEndRange).foreach { eventCount =>
-          val cID: Int = Random.nextInt(customersSize) + 1
-          val cName: String = customersMap(cID)
-          val movieInfo: Array[String] = movie.gen
-          val customer: Customers = new Customers(cID, cName, movieInfo(3).toInt)
-          val customerID: Int               = customer.custId
-          val customerName: String          = customer.custName
-          // val customerActive: String     = customer.userActiveOrNot
-          val customerTimeWatchedInit: Long = customer.timeWatched
-          val customerPausedTime: Int       = customer.pausedTime
-          val customerRating: String        = customer.rating
-          val movieId: String               = movieInfo(0)
-          val movieName: String             = movieInfo(1).replace("'", "")
-          val movieReleaseYear: String      = movieInfo(2)
-          val movieRunTime: String          = movieInfo(3)
-          val movieGenre: String            = movieInfo(4)
+      (eventsStartRange to eventsEndRange).foreach { eventCount =>
+        val cID: Int = Random.nextInt(customersSize) + 1
+        val cName: String = customersMap(cID)
+        val movieInfo: Array[String] = movie.gen
+        val customer: Customers = new Customers(cID, cName, movieInfo(3).toInt)
+        val customerID: Int               = customer.custId
+        val customerName: String          = customer.custName
+        // val customerActive: String     = customer.userActiveOrNot
+        val customerTimeWatchedInit: Long = customer.timeWatched
+        val customerPausedTime: Int       = customer.pausedTime
+        val customerRating: String        = customer.rating
+        val movieId: String               = movieInfo(0)
+        val movieName: String             = movieInfo(1).replace("'", "")
+        val movieReleaseYear: String      = movieInfo(2)
+        val movieRunTime: String          = movieInfo(3)
+        val movieGenre: String            = movieInfo(4)
 
-          /*
-          var operationTry = 0
-          var success = false
-          while (!success && operationTry < config.operationRetires) {
-            try {
-              movieDAO.loadWatchHistory(config.keyspaceName,
-                customerID,
-                customerTimeWatchedInit.toString,
-                customerPausedTime,
-                movieId.toInt,
-                movieName,
-                config.aSync)
-              success = true
-            } catch {
-              case e: Exception => //ignore
-            } finally {
-              operationTry += 1
-              Thread.sleep(500)
-            }
-          }
-          */
-          retry {
+        /*
+        var operationTry = 0
+        var success = false
+        while (!success && operationTry < config.operationRetires) {
+          try {
             movieDAO.loadWatchHistory(config.keyspaceName,
               customerID,
               customerTimeWatchedInit.toString,
@@ -78,54 +60,70 @@ class Insert(eventsStartRange: Int,
               movieId.toInt,
               movieName,
               config.aSync)
-          } giveup {
-            case e: Exception =>
-              logger.debug("failed inserting to 'WatchHistory' after {} tries, reason: {}",
-                config.operationRetires, e.printStackTrace())
-          }
-          retry {
-            movieDAO.loadCustomerRatings(config.keyspaceName,
-              customerID,
-              movieId.toInt,
-              movieName,
-              customerName,
-              customerRating.toFloat,
-              config.aSync)
-          } giveup {
-            case e: Exception =>
-              logger.debug("failed inserting to 'CustomersRating' after {} tries, reason: {}",
-                config.operationRetires, e.printStackTrace())
-          }
-          retry {
-            movieDAO.loadCustomerQueue(config.keyspaceName,
-              customerID,
-              customerTimeWatchedInit.toString,
-              customerName,
-              movieId.toInt,
-              movieName,
-              config.aSync)
-          } giveup {
-            case e: Exception =>
-              logger.debug("failed inserting to 'CustomerQueue' after {} tries, reason: {}",
-                config.operationRetires, e.printStackTrace())
-          }
-          retry {
-            movieDAO.loadMovieGenre(config.keyspaceName,
-              movieGenre,
-              movieReleaseYear.toInt,
-              movieId.toInt,
-              movieRunTime.toInt,
-              movieName,
-              config.aSync)
-          } giveup {
-            case e: Exception =>
-              logger.debug("failed inserting to 'MovieGenre' after {} tries, reason: {}",
-                config.operationRetires, e.printStackTrace())
+            success = true
+          } catch {
+            case e: Exception => //ignore
+          } finally {
+            operationTry += 1
+            Thread.sleep(500)
           }
         }
-        logger.info(s"Records inserted by ${threadName} is : ${totalRecords * 4} from(${eventsStartRange}) to(${eventsEndRange})")
+        */
+        retry {
+          movieDAO.loadWatchHistory(config.keyspaceName,
+            customerID,
+            customerTimeWatchedInit.toString,
+            customerPausedTime,
+            movieId.toInt,
+            movieName,
+            config.aSync)
+        } giveup {
+          case e: Exception =>
+            logger.debug("failed inserting to 'WatchHistory' after {} tries, reason: {}",
+              config.operationRetires, e.printStackTrace())
+        }
+        retry {
+          movieDAO.loadCustomerRatings(config.keyspaceName,
+            customerID,
+            movieId.toInt,
+            movieName,
+            customerName,
+            customerRating.toFloat,
+            config.aSync)
+        } giveup {
+          case e: Exception =>
+            logger.debug("failed inserting to 'CustomersRating' after {} tries, reason: {}",
+              config.operationRetires, e.printStackTrace())
+        }
+        retry {
+          movieDAO.loadCustomerQueue(config.keyspaceName,
+            customerID,
+            customerTimeWatchedInit.toString,
+            customerName,
+            movieId.toInt,
+            movieName,
+            config.aSync)
+        } giveup {
+          case e: Exception =>
+            logger.debug("failed inserting to 'CustomerQueue' after {} tries, reason: {}",
+              config.operationRetires, e.printStackTrace())
+        }
+        retry {
+          movieDAO.loadMovieGenre(config.keyspaceName,
+            movieGenre,
+            movieReleaseYear.toInt,
+            movieId.toInt,
+            movieRunTime.toInt,
+            movieName,
+            config.aSync)
+        } giveup {
+          case e: Exception =>
+            logger.debug("failed inserting to 'MovieGenre' after {} tries, reason: {}",
+              config.operationRetires, e.printStackTrace())
+        }
+        counter.getAndAdd(4)
       }
-      counter.getAndAdd(totalRecords)
+      logger.debug(s"Records inserted by ${threadName} is : ${totalRecords * 4} from(${eventsStartRange}) to(${eventsEndRange})")
     } finally {
       movieDAO.close()
     }

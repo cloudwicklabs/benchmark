@@ -253,7 +253,7 @@ Cassandra benchmark driver can do the following:
 ```
 $bin/benchmark cassandra --help
 
-cassandra 0.4
+cassandra 0.5
 Usage: cassandra_benchmark [options] [<totalEvents>...]
 
   -m <insert|read|query> | --mode <insert|read|query>

@@ -50,8 +50,12 @@ class BatchInsertConcurrent (events: Long, config: OptionsConfig) extends Runnab
       } finally {
         threadPool.shutdown()
       }
-      while(!threadPool.isTerminated) {}
-      logger.info("Total documents processed by {} threads: {}", config.threadCount, finalCounter)
+      while(!threadPool.isTerminated) {
+        // print every 10 seconds how many documents have been inserted
+        Thread.sleep(10 * 1000)
+        println("Records inserted: " + finalCounter)
+      }
+      logger.info("Total records processed by {} thread(s): {}", config.threadCount, finalCounter)
     }
   }
 }
