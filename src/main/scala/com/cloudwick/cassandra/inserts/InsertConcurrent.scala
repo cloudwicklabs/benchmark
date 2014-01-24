@@ -26,7 +26,7 @@ class InsertConcurrent(events: Long, config: OptionsConfig) extends Runnable {
 
 
   def buildCustomersMap = {
-    logger.info("Building a customer data set of size: {}", config.customerDataSetSize)
+    logger.debug("Building a customer data set of size: {}", config.customerDataSetSize)
     (1 to config.customerDataSetSize).foreach { custId =>
       customers += custId -> person.gen
     }
@@ -37,7 +37,7 @@ class InsertConcurrent(events: Long, config: OptionsConfig) extends Runnable {
     utils.time(s"inserting $events") {
       try {
         (1 to config.threadCount).foreach { threadCount =>
-          logger.info("Initializing thread {}", threadCount)
+          logger.debug("Initializing thread {}", threadCount)
           threadPool.execute(
             new Insert(
               messagesRange(threadCount-1), // start range for thread
@@ -51,8 +51,12 @@ class InsertConcurrent(events: Long, config: OptionsConfig) extends Runnable {
       } finally {
         threadPool.shutdown()
       }
-      while(!threadPool.isTerminated) {}
-      logger.info("Total documents processed by {} threads: {}", config.threadCount, finalCounter)
+      while(!threadPool.isTerminated) {
+        // print every 10 seconds how many documents have been inserted
+        Thread.sleep(10 * 1000)
+        println("Records inserted: " + finalCounter)
+      }
+      logger.info("Total records processed by {} thread(s): {}", config.threadCount, finalCounter)
     }
   }
 }

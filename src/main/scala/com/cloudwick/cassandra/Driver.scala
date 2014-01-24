@@ -16,7 +16,7 @@ object Driver extends App {
    * Command line option parser
    */
   val optionsParser = new scopt.OptionParser[OptionsConfig]("cassandra_benchmark") {
-    head("cassandra", "0.4")
+    head("cassandra", "0.5")
     opt[String]('m', "mode") required() valueName "<insert|read|query>" action { (x, c) =>
       c.copy(mode = x)
     } validate { x: String =>
@@ -99,7 +99,7 @@ object Driver extends App {
 
         if(config.totalEvents.size == 0) {
           val events = 10000
-          logger.info("Defaulting inserts to {}", events)
+          logger.info("Defaulting inserts to {} into 4 tables", events)
           if (config.batchSize == 0) {
             new InsertConcurrent(events, config).run()
           } else {

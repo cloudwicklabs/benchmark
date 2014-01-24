@@ -61,10 +61,10 @@ public class MovieDAO {
           .build();
 
       Metadata metadata = cluster.getMetadata();
-      logger.info("Connected to cluster: {}", metadata.getClusterName());
+      logger.debug("Connected to cluster: {}", metadata.getClusterName());
 
       for ( Host host : metadata.getAllHosts() ) {
-        logger.info("DataCenter: {}; Host: {}; Rack: {}\n",
+        logger.debug("DataCenter: {}; Host: {}; Rack: {}\n",
             host.getDatacenter(), host.getAddress(), host.getRack());
       }
       this.connect();
@@ -106,11 +106,11 @@ public class MovieDAO {
   public void close() {
     if (session != null) {
       session.shutdown();
-      logger.info("Successfully closed session");
+      logger.debug("Successfully closed session");
     }
     if (cluster != null) {
       cluster.shutdown();
-      logger.info("Successfully closed cluster connection");
+      logger.debug("Successfully closed cluster connection");
     }
   }
 
@@ -364,9 +364,9 @@ public class MovieDAO {
 
     // Get the columns returned by the query
     ColumnDefinitions columnDefinitions = resultSet.getColumnDefinitions();
-    logger.info(columnDefinitions.toString());
+     // logger.debug(columnDefinitions.toString());
     for (Row row: resultSet) {
-      logger.info(row.toString());
+      logger.debug(row.toString());
     }
   }
 

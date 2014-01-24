@@ -42,95 +42,94 @@ class BatchInsert(eventsStartRange: Int,
     val customersSize = customersMap.size
 
     try {
-      utils.time(s"inserting $totalRecords by thread $threadName") {
-        (eventsStartRange to eventsEndRange).foreach { recordID =>
-          totalRecordCounter += 1
-          batchMessagesCount += 1
+      (eventsStartRange to eventsEndRange).foreach { recordID =>
+        totalRecordCounter += 1
+        batchMessagesCount += 1
 
-          val cID: Int = Random.nextInt(customersSize) + 1
-          val cName: String = customersMap(cID)
-          val movieInfo: Array[String] = movie.gen
-          val customer: Customers = new Customers(cID, cName, movieInfo(3).toInt)
-          val customerID: Int               = customer.custId
-          val customerName: String          = customer.custName
-          // val customerActive: String     = customer.userActiveOrNot
-          val customerTimeWatchedInit: Long = customer.timeWatched
-          val customerPausedTime: Int       = customer.pausedTime
-          val customerRating: String        = customer.rating
-          val movieId: String               = movieInfo(0)
-          val movieName: String             = movieInfo(1).replace("'", "")
-          val movieReleaseYear: String      = movieInfo(2)
-          val movieRunTime: String          = movieInfo(3)
-          val movieGenre: String            = movieInfo(4)
+        val cID: Int = Random.nextInt(customersSize) + 1
+        val cName: String = customersMap(cID)
+        val movieInfo: Array[String] = movie.gen
+        val customer: Customers = new Customers(cID, cName, movieInfo(3).toInt)
+        val customerID: Int               = customer.custId
+        val customerName: String          = customer.custName
+        // val customerActive: String     = customer.userActiveOrNot
+        val customerTimeWatchedInit: Long = customer.timeWatched
+        val customerPausedTime: Int       = customer.pausedTime
+        val customerRating: String        = customer.rating
+        val movieId: String               = movieInfo(0)
+        val movieName: String             = movieInfo(1).replace("'", "")
+        val movieReleaseYear: String      = movieInfo(2)
+        val movieRunTime: String          = movieInfo(3)
+        val movieGenre: String            = movieInfo(4)
 
-          customerWatchHistoryData.put(recordID, bufferAsJavaList(ArrayBuffer(
-            customerID.toString,
-            customerTimeWatchedInit.toString,
-            customerPausedTime.toString,
-            movieId,
-            movieName)))
-          customerRatingData.put(recordID, bufferAsJavaList(ArrayBuffer(
-            customerID.toString,
-            movieId,
-            movieName,
-            customerName,
-            customerRating)))
-          customerQueueData.put(recordID, bufferAsJavaList(ArrayBuffer(
-            customerID.toString,
-            customerTimeWatchedInit.toString,
-            customerName,
-            movieId,
-            movieName)))
-          movieGenreData.put(recordID, bufferAsJavaList(ArrayBuffer(
-            movieGenre,
-            movieReleaseYear,
-            movieId,
-            movieRunTime,
-            movieName)))
+        customerWatchHistoryData.put(recordID, bufferAsJavaList(ArrayBuffer(
+          customerID.toString,
+          customerTimeWatchedInit.toString,
+          customerPausedTime.toString,
+          movieId,
+          movieName)))
+        customerRatingData.put(recordID, bufferAsJavaList(ArrayBuffer(
+          customerID.toString,
+          movieId,
+          movieName,
+          customerName,
+          customerRating)))
+        customerQueueData.put(recordID, bufferAsJavaList(ArrayBuffer(
+          customerID.toString,
+          customerTimeWatchedInit.toString,
+          customerName,
+          movieId,
+          movieName)))
+        movieGenreData.put(recordID, bufferAsJavaList(ArrayBuffer(
+          movieGenre,
+          movieReleaseYear,
+          movieId,
+          movieRunTime,
+          movieName)))
 
-          // val configBatch: Boolean = (batchMessagesCount == config.batchSize)
-          // val totalBatch: Boolean = (totalRecordCounter == eventsEndRange)
-          if ( batchMessagesCount == config.batchSize || totalRecordCounter == eventsEndRange) {
-            logger.info("Flushing batch size of: " + batchMessagesCount)
-            retry {
-              movieDAO.batchLoadWatchHistory(config.keyspaceName, customerWatchHistoryData, config.aSync)
-            } giveup {
-              case e: Exception =>
-                logger.debug("failed inserting batch to 'WatchHistory' after {} tries, reason: {}",
-                  config.operationRetires, e.printStackTrace())
-            }
-            retry {
-              movieDAO.batchLoadCustomerRatings(config.keyspaceName, customerRatingData, config.aSync)
-            } giveup {
-              case e: Exception =>
-                logger.debug("failed inserting batch to 'CustomerRating' after {} tries, reason: {}",
-                  config.operationRetires, e.printStackTrace())
-            }
-            retry {
-              movieDAO.batchLoadCustomerQueue(config.keyspaceName, customerQueueData, config.aSync)
-            } giveup {
-              case e: Exception =>
-                logger.debug("failed inserting batch to 'CustomerQueue' after {} tries, reason: {}",
-                  config.operationRetires, e.printStackTrace())
-            }
-            retry {
-              movieDAO.batchLoadMovieGenre(config.keyspaceName, movieGenreData, config.aSync)
-            } giveup {
-              case e: Exception =>
-                logger.debug("failed inserting batch to 'MovieGenre' after {} tries, reason: {}",
-                  config.operationRetires, e.printStackTrace())
-            }
-            // reset counters and batch holders
-            batchMessagesCount = 0
-            customerWatchHistoryData.clear()
-            customerRatingData.clear()
-            customerQueueData.clear()
-            movieGenreData.clear()
+        // val configBatch: Boolean = (batchMessagesCount == config.batchSize)
+        // val totalBatch: Boolean = (totalRecordCounter == eventsEndRange)
+        if ( batchMessagesCount == config.batchSize || totalRecordCounter == eventsEndRange) {
+          logger.info("Flushing batch size of: " + batchMessagesCount)
+          retry {
+            movieDAO.batchLoadWatchHistory(config.keyspaceName, customerWatchHistoryData, config.aSync)
+          } giveup {
+            case e: Exception =>
+              logger.debug("failed inserting batch to 'WatchHistory' after {} tries, reason: {}",
+                config.operationRetires, e.printStackTrace())
           }
+          retry {
+            movieDAO.batchLoadCustomerRatings(config.keyspaceName, customerRatingData, config.aSync)
+          } giveup {
+            case e: Exception =>
+              logger.debug("failed inserting batch to 'CustomerRating' after {} tries, reason: {}",
+                config.operationRetires, e.printStackTrace())
+          }
+          retry {
+            movieDAO.batchLoadCustomerQueue(config.keyspaceName, customerQueueData, config.aSync)
+          } giveup {
+            case e: Exception =>
+              logger.debug("failed inserting batch to 'CustomerQueue' after {} tries, reason: {}",
+                config.operationRetires, e.printStackTrace())
+          }
+          retry {
+            movieDAO.batchLoadMovieGenre(config.keyspaceName, movieGenreData, config.aSync)
+          } giveup {
+            case e: Exception =>
+              logger.debug("failed inserting batch to 'MovieGenre' after {} tries, reason: {}",
+                config.operationRetires, e.printStackTrace())
+          }
+          counter.getAndAdd(batchMessagesCount * 4)
+          // reset counters and batch holders
+          batchMessagesCount = 0
+          customerWatchHistoryData.clear()
+          customerRatingData.clear()
+          customerQueueData.clear()
+          movieGenreData.clear()
         }
-        logger.info(s"Records inserted by $threadName is : ${totalRecordCounter * 4} from($eventsStartRange) to($eventsEndRange)")
       }
-      counter.getAndAdd(totalRecords)
+      logger.debug(s"Records inserted by $threadName is : ${totalRecordCounter * 4} from($eventsStartRange) to($eventsEndRange)")
+      // counter.getAndAdd(totalRecords)
     } finally {
       movieDAO.close()
     }
