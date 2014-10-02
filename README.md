@@ -29,7 +29,7 @@ projects root)
 
 ```
 cd /opt/benchmark
-SBT_OPTS="-Xmx512M -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -XX:MaxPermSize=2G -Xss2M" sbt assembly
+sbt assembly
 ```
 
 Running
