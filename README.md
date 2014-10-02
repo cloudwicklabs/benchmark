@@ -8,6 +8,15 @@ HBase, Redis, Solr and various others.
 
 **WIP**: HBase
 
+Getting the Project
+-------------------
+Clone the project using git:
+
+```
+cd /opt
+git clone https://github.com/cloudwicklabs/benchmark.git
+```
+
 Build Project
 -------------
 Requirement for building the project:
@@ -19,6 +28,7 @@ Once, requirements are installed. Follow these steps to build a jar with depende
 projects root)
 
 ```
+cd /opt/benchmark
 sbt assembly
 ```
 
@@ -27,6 +37,7 @@ Running
 To run the benchmark programs, use the wrapper script
 
 ```
+cd /opt/benchmark
 chmod +x bin/benchmark
 bin/benchmark
 ```
@@ -148,7 +159,7 @@ Mongo Benchmark Example(s):
 specify the path where the mongo is listening. For more details on how to build the url please visit
 [here](http://goo.gl/UglKHb).
 
-Example connection URI scheme: 
+Example connection URI scheme:
 
 ```
 mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
@@ -241,7 +252,7 @@ also providing batch size using which the driver will flush the data:
 
 ###Benchmarking Cassandra
 Cassandra benchmark driver can do the following:
-  
+
   * Benchmark inserts for a given range of inputs
       * Generates random movie dataset events
       * Can insert in both `batch` mode and `normal` mode, batch mode automatically batches a set of events and sends them to cassandra
@@ -286,12 +297,12 @@ Usage: cassandra_benchmark [options] [<totalEvents>...]
 Cassandra Benchmark Example(s):
 
 1. Inserts of 2500, 25000, 250000 of rows into 4 tables which is equivalent to 10000, 100000, 1000000 insertions
-  
+
     ```
     bin/benchmark cassandra --mode insert 2500 25000 250000
     ```
 2. Inserts of 2500, 25000, 250000 of rows into 4 tables using batch inserts with a batch size of 500
-  
+
     ```
     bin/benchmark cassandra --mode insert 2500 25000 250000 --batchSize 500
     ```
@@ -302,7 +313,7 @@ previously existing data in the tables:
     bin/run cassandra --mode insert 2500 25000 250000 --batchSize 500 --dropExistingTables
     ```
 4. Inserts in asynchronous mode, which does not required acknowledge back from cassandra:
-  
+
     ```
     bin/run cassandra --mode insert 2500 25000 250000 --batchSize 500 --dropExistingTables --aSyncInserts
     ```
