@@ -105,11 +105,11 @@ public class MovieDAO {
    */
   public void close() {
     if (session != null) {
-      session.shutdown();
+      session.close();
       logger.debug("Successfully closed session");
     }
     if (cluster != null) {
-      cluster.shutdown();
+      cluster.close();
       logger.debug("Successfully closed cluster connection");
     }
   }

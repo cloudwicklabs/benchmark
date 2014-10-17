@@ -23,7 +23,9 @@ object Build extends Build {
       "com.github.scopt" %% "scopt" % "3.1.0",
       "org.apache.solr" % "solr-solrj" % "4.3.1",
       "jp.sf.amateras.solr.scala" %% "solr-scala-client" % "0.0.8",
-      "com.datastax.cassandra" % "cassandra-driver-core" % "2.0.0-rc1"
+      "com.datastax.cassandra" % "cassandra-driver-core" % "2.1.2"
+//      "org.apache.hadoop" % "hadoop-client" % "2.0.0-mr1-cdh4.5.0.2",
+//      "org.apache.hbase" % "hbase" % "0.94.6-cdh4.5.0"
     )
 
     val testDependencies = Seq(
@@ -33,7 +35,8 @@ object Build extends Build {
     )
 
     val resolvers = Seq(
-      "amateras-repo" at "http://amateras.sourceforge.jp/mvn/"
+      "amateras-repo" at "http://amateras.sourceforge.jp/mvn/",
+      "cloudera-repo-releases" at "https://repository.cloudera.com/artifactory/repo/"
     )
   }
 }
