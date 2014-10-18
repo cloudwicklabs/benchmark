@@ -1,4 +1,10 @@
-target/
+target/resolution-cache
+target/streams
+target/.history
+target/scala-2.10/*
+!target/scala-2.10/benchmark-assembly-0.1.jar
+project/project
+project/target
 .cache
 .classpath
 .project
