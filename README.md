@@ -10,6 +10,7 @@ HBase, Redis, Solr and various others.
 
 Getting the Project
 -------------------
+
 Clone the project using git:
 
 ```
@@ -17,8 +18,19 @@ cd /opt
 git clone https://github.com/cloudwicklabs/benchmark.git
 ```
 
-Build Project
--------------
+
+There are two methods to build this project 
+
+1. Manual Build 
+2. Download Jar file 
+
+For Manual Build follow the below steps 
+
+Method 1 
+--------
+
+###Build Project
+
 Requirement for building the project:
 
  * [sbt](http://www.scala-sbt.org/) (version 0.13.0)
@@ -32,8 +44,7 @@ cd /opt/benchmark
 sbt assembly
 ```
 
-Running
--------
+###Running
 To run the benchmark programs, use the wrapper script
 
 ```
@@ -53,7 +64,7 @@ Possible DRIVER(s)
 ```
 where, each sub-command represents a driver interface to the application that's used to benchmark.
 
-###Benchmarking Mongo
+####Benchmarking Mongo
 Mongo benchmark driver can do the following:
 
   * Benchmark inserts for given number of events (also supports concurrency)
@@ -165,7 +176,7 @@ Example connection URI scheme:
 mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
 ```
 
-###Benchmarking Solr
+####Benchmarking Solr
 Solr benchmark driver can do the following:
 
   * Benchmark inserts for a given range of inputs
@@ -250,7 +261,7 @@ also providing batch size using which the driver will flush the data:
     bin/benchmark solr --mode search --query '*:*' --queryCount 20
     ```
 
-###Benchmarking Cassandra
+####Benchmarking Cassandra
 Cassandra benchmark driver can do the following:
 
   * Benchmark inserts for a given range of inputs
@@ -315,12 +326,12 @@ previously existing data in the tables:
 4. Inserts in asynchronous mode, which does not required acknowledge back from cassandra:
 
     ```
-    bin/run cassandra --mode insert 2500 25000 250000 --batchSize 500 --dropExistingTables --aSyncInserts
+    bin/benchmark cassandra --mode insert 2500 25000 250000 --batchSize 500 --dropExistingTables --aSyncInserts
     ```
 5. Random reads
 
     ```
-    bin/run cassandra --mode read 2500 25000 250000
+    bin/benchmark cassandra --mode read 2500 25000 250000
     ```
 
 >
@@ -328,7 +339,242 @@ previously existing data in the tables:
 > thread poolsize, see options for more details
 >
 
+---
+
+Method 2( Prebuild Jar Method)
+------------------------------
+
+Download the latest version of jar from the release 
+
+https://github.com/cloudwicklabs/benchmark/releases
+
+
+####Benchmarking Mongo using the jar
+
+```
+java -cp benchmark-assembly-0.1.jar com.cloudwick.mongo.Driver --help
+mongo 0.7
+Usage: mongo_benchmark [options] [<totalEvents>...]
+
+  -m <insert|read|agg_query> | --mode <insert|read|agg_query>
+        operation mode ('insert' will insert log events, 'read' will perform random reads & 'agg_query' performs pre-defined aggregate queries)
+  -u <value> | --mongoURL <value>
+        mongo connection url to connect to, defaults to: 'mongodb://localhost:27017' (for more information on mongo connection url format, please refer: http://goo.gl/UglKHb)
+  -e <value> | --eventsPerSec <value>
+        number of log events to generate per sec
+  <totalEvents>...
+        total number of events to insert|read
+  -s <value> | --ipSessionCount <value>
+        number of times a ip can appear in a session, defaults to: '25'
+  -l <value> | --ipSessionLength <value>
+        size of the session, defaults to: '50'
+  -b <value> | --batchSize <value>
+        size of the batch to flush to mongo instead of single inserts, defaults to: '0'
+  -t <value> | --threadsCount <value>
+        number of threads to use for write and read operations, defaults to: 1
+  -p <value> | --threadPoolSize <value>
+        size of the thread pool, defaults to: 10
+  -d <value> | --dbName <value>
+        name of the database to create|connect in mongo, defaults to: 'logs'
+  -c <value> | --collectionName <value>
+        name of the collection to create|connect in mongo, defaults to: 'logEvents'
+  -w <value> | --writeConcern <value>
+        write concern level to use, possible values: none, safe, majority; defaults to: 'none'
+  -r <value> | --readPreference <value>
+        read preference mode to use, possible values: primary, primaryPreferred, secondary, secondaryPreferred or nearest; defaults to: 'none'
+         where,
+                primary - all read operations use only current replica set primary
+                primaryPreferred - if primary is unavailable fallback to secondary
+                secondary - all read operations use only secondary members of the replica set
+                secondaryPreferred - operations read from secondary members, fallback to primary
+                nearest - use this mode to read from both primaries and secondaries (may return stale data)
+  -i | --indexData
+        index data on 'response_code' and 'request_page' after inserting, defaults to: 'false'
+  --shard
+        specifies whether to create a shard collection or a normal collection
+  --shardPreSplit
+        specifies whether to pre-split a shard and move the chunks to the available shards in the cluster
+  -o <value> | --operationRetries <value>
+        number of times a operation has to retired before exhausting, defaults to: '10'
+  --help
+        prints this usage text
+```
+
+
+Mongo Benchmark Example(s):
+
+1. Inserts of 100000, 1000000 and 100000000 documents consecutively on single mongo instance:
+
+    ```
+    java -cp benchmark-assembly-0.1.jar com.cloudwick.mongo.Driver --mode insert 100000 1000000 100000000
+    ```
+
+2. Inserts of 100000, 1000000 and 100000000 documents on sharded mongo cluster, this requires running the benchmark
+ from `mongos` (mongo router)
+
+    ```
+    java -cp benchmark-assembly-0.1.jar com.cloudwick.mongo.Driver mongo --mode insert 100000 1000000 100000000 --shard
+    ```
+
+3. Inserts of 100000, 1000000 and 100000000 documents consecutively and also indexes the data once inserted:
+
+    ```
+    java -cp benchmark-assembly-0.1.jar com.cloudwick.mongo.Driver mongo --mode insert 100000 1000000 100000000 --indexData
+    ```
+
+4. Insert data with indexing and custom batch size:
+
+    ```
+    java -cp benchmark-assembly-0.1.jar com.cloudwick.mongo.Driver mongo --mode insert 100000 1000000 100000000 --indexData --batchSize 5000
+    ```
+
+5. Benchmark random reads of 10000, 100000 and 1000000 documents:
+
+    ```
+    java -cp benchmark-assembly-0.1.jar com.cloudwick.mongo.Driver mongo --mode read 10000 100000 1000000
+    ```
+
+6. Perform aggregation queries on the inserted data
+
+    ```
+    java -cp benchmark-assembly-0.1.jar com.cloudwick.mongo.Driver mongo --mode agg_query
+    ```
+
+
+####Benchmarking Solr using Jar 
+
+```
+java -cp benchmark-assembly-0.1.jar com.cloudwick.solr.Driver --help
+solr 0.1
+Usage: index_logs [options] [<totalEvents>...]
+
+Indexes log events to solr
+  -m <index|read|search> | --mode <index|read|search>
+        operation mode ('index' will index logs, 'search' will perform search &'read' will perform random reads against solr core)
+  -u <value> | --solrServerUrl <value>
+        url for connecting to solr server instance
+  <totalEvents>...
+        total number of events to insert|read
+  -s <value> | --ipSessionCount <value>
+        number of times a ip can appear in a session, defaults to: '25'
+  -l <value> | --ipSessionLength <value>
+        size of the session, defaults to: 50
+  -b <value> | --batchSize <value>
+        flushes events from memory to solr index, defaults to: '1000'
+  -c | --cleanPreviousIndex
+        deletes the existing index on solr core
+  -q <value> | --query <value>
+        solr query to execute, defaults to: '*:*'
+  --queryCount <value>
+        number of documents to return on executed query, default:10
+  --help
+        prints this usage text
+```
+
+
+Solr Driver Example(s):
+
+1. To benchmark the inserts of 100000, 1000000 and 100000000 log events consecutively:
+
+    ```
+    java -cp benchmark-assembly-0.1.jar com.cloudwick.solr.Driver solr --mode insert 100000 1000000 100000000
+    ```
+
+2. To benchmark the inserts of 100000, 1000000 and 100000000 log events consecutively while clearing existing index data:
+
+    ```
+    java -cp benchmark-assembly-0.1.jar com.cloudwick.solr.Driver solr --mode insert 100000 1000000 100000000 --cleanPreviousIndex
+    ```
+
+3. To benchmark the inserts of 100000, 1000000 and 100000000 log events consecutively while clearing existing index data and
+also providing batch size using which the driver will flush the data:
+
+    ```
+    java -cp benchmark-assembly-0.1.jar com.cloudwick.solr.Driver solr --mode insert 100000 1000000 100000000 --cleanPreviousIndex --batchSize 10000
+    ```
+
+4. To benchmark random reads
+
+    ```
+    java -cp benchmark-assembly-0.1.jar com.cloudwick.solr.Driver solr --mode read 10000 100000 1000000
+    ```
+
+5. To execute custom queries and return specified number of documents
+
+    ```
+    java -cp benchmark-assembly-0.1.jar com.cloudwick.solr.Driver solr --mode search --query '*:*' --queryCount 20
+```
+
+
+####Benchmarking Cassandra using Jar
+
+```
+java -cp benchmark-assembly-0.1.jar com.cloudwick.cassandra.Driver --help
+cassandra 0.5
+Usage: cassandra_benchmark [options] [<totalEvents>...]
+
+  -m <insert|read|query> | --mode <insert|read|query>
+        operation mode ('insert' will insert log events, 'read' will perform random reads & 'query' performs pre-defined set of queries on the inserted data set)
+  -n <value> | --cassNode <value>
+        cassandra node to connect, defaults to: '127.0.0.1'
+  <totalEvents>...
+        total number of events to insert|read
+  -b <value> | --batchSize <value>
+        size of the batch to flush to cassandra; set this to avoid single inserts, defaults to: '0'
+  -c <value> | --customersDataSize <value>
+        size of the data set of customers to use for generating data, defaults to: '1000'
+  -k <value> | --keyspaceName <value>
+        name of the database to create|connect in cassandra, defaults to: 'moviedata'
+  -d | --dropExistingTables
+        drop existing tables in the keyspace, defaults to: 'false'
+  -a | --aSyncInserts
+        performs asynchronous inserts, defaults to: 'false'
+  -r <value> | --replicationFactor <value>
+        replication factor to use when inserting data, defaults to: '1'
+  -o <value> | --operationRetries <value>
+        number of times a operation has to retired before exhausting, defaults to: '10'
+  -t <value> | --threadsCount <value>
+        number of threads to use for write and read operations, defaults to: 1
+  -p <value> | --threadPoolSize <value>
+        size of the thread pool, defaults to: 10
+  --help
+        prints this usage text
+```
+
+
+Cassandra Benchmark Example(s):
+
+1. Inserts of 2500, 25000, 250000 of rows into 4 tables which is equivalent to 10000, 100000, 1000000 insertions
+
+    ```
+    java -cp benchmark-assembly-0.1.jar com.cloudwick.cassandra.Driver cassandra --mode insert 2500 25000 250000
+    ```
+2. Inserts of 2500, 25000, 250000 of rows into 4 tables using batch inserts with a batch size of 500
+
+    ```
+    java -cp benchmark-assembly-0.1.jar com.cloudwick.cassandra.Driver cassandra --mode insert 2500 25000 250000 --batchSize 500
+    ```
+3. Inserts of 2500, 25000, 250000 of rows into 4 tables using batch inserts with a batch size of 500 and also delete the
+previously existing data in the tables:
+
+    ```
+    java -cp benchmark-assembly-0.1.jar com.cloudwick.cassandra.Driver cassandra --mode insert 2500 25000 250000 --batchSize 500 --dropExistingTables
+    ```
+4. Inserts in asynchronous mode, which does not required acknowledge back from cassandra:
+
+    ```
+    java -cp benchmark-assembly-0.1.jar com.cloudwick.cassandra.Driver cassandra --mode insert 2500 25000 250000 --batchSize 500 --dropExistingTables --aSyncInserts
+    ```
+5. Random reads
+
+    ```
+    java -cp benchmark-assembly-0.1.jar com.cloudwick.cassandra.Driver cassandra --mode read 2500 25000 250000
+    ```
+
+
 ###License and Authors
 Authors: [Ashrith](http://github.com/ashrithr)
 
 Apache 2.0. Please see `LICENSE.txt`. All contents copyright (c) 2013, Cloudwick Labs.
+
+
