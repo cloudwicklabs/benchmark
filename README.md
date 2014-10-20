@@ -338,6 +338,23 @@ previously existing data in the tables:
 > thread poolsize, see options for more details
 >
 
+
+For the Download Jar method follow the below steps 
+
+Method 2
+---------
+
+Download the jar from githud downloads 
+    
+    ```
+    wget https://github.com/cloudwicklabs/benchmark/
+    ```
+Copy the file to tmp location 
+
+java -cp benchmark.jar /tmp 
+
+
+
 ###License and Authors
 Authors: [Ashrith](http://github.com/ashrithr)
 
