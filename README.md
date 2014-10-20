@@ -325,12 +325,12 @@ previously existing data in the tables:
 4. Inserts in asynchronous mode, which does not required acknowledge back from cassandra:
 
     ```
-    bin/run cassandra --mode insert 2500 25000 250000 --batchSize 500 --dropExistingTables --aSyncInserts
+    bin/benchmark cassandra --mode insert 2500 25000 250000 --batchSize 500 --dropExistingTables --aSyncInserts
     ```
 5. Random reads
 
     ```
-    bin/run cassandra --mode read 2500 25000 250000
+    bin/benchmark cassandra --mode read 2500 25000 250000
     ```
 
 >
@@ -343,8 +343,6 @@ For the Download Jar method follow the below steps
 
 Method 2
 ---------
-
-Download the jar from githud downloads 
 
 Get to the location where you have cloned the benchmark
 Then copy the jar file to a temporary location
