@@ -11,6 +11,14 @@ HBase, Redis, Solr and various others.
 Getting the Project
 -------------------
 
+Clone the project using git:
+
+```
+cd /opt
+git clone https://github.com/cloudwicklabs/benchmark.git
+```
+
+
 There are two methods to build this project 
 
 1. Manual Build 
@@ -20,15 +28,9 @@ For Manual Build follow the below steps
 
 Method 1 
 --------
-Clone the project using git:
 
-```
-cd /opt
-git clone https://github.com/cloudwicklabs/benchmark.git
-```
+###Build Project
 
-Build Project
--------------
 Requirement for building the project:
 
  * [sbt](http://www.scala-sbt.org/) (version 0.13.0)
@@ -42,8 +44,7 @@ cd /opt/benchmark
 sbt assembly
 ```
 
-Running
--------
+###Running
 To run the benchmark programs, use the wrapper script
 
 ```
@@ -63,7 +64,7 @@ Possible DRIVER(s)
 ```
 where, each sub-command represents a driver interface to the application that's used to benchmark.
 
-###Benchmarking Mongo
+####Benchmarking Mongo
 Mongo benchmark driver can do the following:
 
   * Benchmark inserts for given number of events (also supports concurrency)
@@ -175,7 +176,7 @@ Example connection URI scheme:
 mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
 ```
 
-###Benchmarking Solr
+####Benchmarking Solr
 Solr benchmark driver can do the following:
 
   * Benchmark inserts for a given range of inputs
@@ -260,7 +261,7 @@ also providing batch size using which the driver will flush the data:
     bin/benchmark solr --mode search --query '*:*' --queryCount 20
     ```
 
-###Benchmarking Cassandra
+####Benchmarking Cassandra
 Cassandra benchmark driver can do the following:
 
   * Benchmark inserts for a given range of inputs
@@ -338,23 +339,18 @@ previously existing data in the tables:
 > thread poolsize, see options for more details
 >
 
+---
 
-For the Download Jar method follow the below steps 
+Method 2( Prebuild Jar Method)
+------------------------------
 
-Method 2
----------
+Download the latest version of jar from the release 
 
-Get to the location where you have cloned the benchmark
-Then copy the jar file to a temporary location
-
-```
-cp  benchmark/target/scala-2.10/benchmark-assembly-0.1.jar /tmp/
-
-cd /tmp
-```
+https://github.com/cloudwicklabs/benchmark/releases
 
 
-###Benchmarking Mongo using the jar
+####Benchmarking Mongo using the jar
+
 ```
 java -cp benchmark-assembly-0.1.jar com.cloudwick.mongo.Driver --help
 mongo 0.7
@@ -445,10 +441,10 @@ Mongo Benchmark Example(s):
     ```
 
 
-###Benchmarking Solr using Jar 
+####Benchmarking Solr using Jar 
 
 ```
-# java -cp benchmark-assembly-0.1.jar com.cloudwick.solr.Driver --help
+java -cp benchmark-assembly-0.1.jar com.cloudwick.solr.Driver --help
 solr 0.1
 Usage: index_logs [options] [<totalEvents>...]
 
@@ -510,10 +506,10 @@ also providing batch size using which the driver will flush the data:
 ```
 
 
-###Benchmarking Cassandra using Jar
+####Benchmarking Cassandra using Jar
 
 ```
-]# java -cp benchmark-assembly-0.1.jar com.cloudwick.cassandra.Driver --help
+java -cp benchmark-assembly-0.1.jar com.cloudwick.cassandra.Driver --help
 cassandra 0.5
 Usage: cassandra_benchmark [options] [<totalEvents>...]
 
