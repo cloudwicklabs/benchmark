@@ -345,14 +345,106 @@ Method 2
 ---------
 
 Download the jar from githud downloads 
-    
+
+Get to the location where you have cloned the benchmark
+Then copy the jar file to a temporary location
+
 ```
-wget https://github.com/cloudwicklabs/benchmark
+cp  benchmark/target/scala-2.10/benchmark-assembly-0.1.jar /tmp/
+
+cd /tmp
 ```
 
-Copy the file to tmp location 
 
-java -cp benchmark.jar /tmp 
+###Benchmarking Mongo using the jar file 
+```
+java -cp benchmark-assembly-0.1.jar com.cloudwick.mongo.Driver --help
+mongo 0.7
+Usage: mongo_benchmark [options] [<totalEvents>...]
+
+  -m <insert|read|agg_query> | --mode <insert|read|agg_query>
+        operation mode ('insert' will insert log events, 'read' will perform random reads & 'agg_query' performs pre-defined aggregate queries)
+  -u <value> | --mongoURL <value>
+        mongo connection url to connect to, defaults to: 'mongodb://localhost:27017' (for more information on mongo connection url format, please refer: http://goo.gl/UglKHb)
+  -e <value> | --eventsPerSec <value>
+        number of log events to generate per sec
+  <totalEvents>...
+        total number of events to insert|read
+  -s <value> | --ipSessionCount <value>
+        number of times a ip can appear in a session, defaults to: '25'
+  -l <value> | --ipSessionLength <value>
+        size of the session, defaults to: '50'
+  -b <value> | --batchSize <value>
+        size of the batch to flush to mongo instead of single inserts, defaults to: '0'
+  -t <value> | --threadsCount <value>
+        number of threads to use for write and read operations, defaults to: 1
+  -p <value> | --threadPoolSize <value>
+        size of the thread pool, defaults to: 10
+  -d <value> | --dbName <value>
+        name of the database to create|connect in mongo, defaults to: 'logs'
+  -c <value> | --collectionName <value>
+        name of the collection to create|connect in mongo, defaults to: 'logEvents'
+  -w <value> | --writeConcern <value>
+        write concern level to use, possible values: none, safe, majority; defaults to: 'none'
+  -r <value> | --readPreference <value>
+        read preference mode to use, possible values: primary, primaryPreferred, secondary, secondaryPreferred or nearest; defaults to: 'none'
+         where,
+                primary - all read operations use only current replica set primary
+                primaryPreferred - if primary is unavailable fallback to secondary
+                secondary - all read operations use only secondary members of the replica set
+                secondaryPreferred - operations read from secondary members, fallback to primary
+                nearest - use this mode to read from both primaries and secondaries (may return stale data)
+  -i | --indexData
+        index data on 'response_code' and 'request_page' after inserting, defaults to: 'false'
+  --shard
+        specifies whether to create a shard collection or a normal collection
+  --shardPreSplit
+        specifies whether to pre-split a shard and move the chunks to the available shards in the cluster
+  -o <value> | --operationRetries <value>
+        number of times a operation has to retired before exhausting, defaults to: '10'
+  --help
+        prints this usage text
+```
+
+
+Mongo Benchmark Example(s):
+
+1. Inserts of 100000, 1000000 and 100000000 documents consecutively on single mongo instance:
+
+    ```
+    java -cp benchmark-assembly-0.1.jar com.cloudwick.mongo.Driver --mode insert 100000 1000000 100000000
+    ```
+
+2. Inserts of 100000, 1000000 and 100000000 documents on sharded mongo cluster, this requires running the benchmark
+ from `mongos` (mongo router)
+
+    ```
+    java -cp benchmark-assembly-0.1.jar com.cloudwick.mongo.Driver mongo --mode insert 100000 1000000 100000000 --shard
+    ```
+
+3. Inserts of 100000, 1000000 and 100000000 documents consecutively and also indexes the data once inserted:
+
+    ```
+    java -cp benchmark-assembly-0.1.jar com.cloudwick.mongo.Driver mongo --mode insert 100000 1000000 100000000 --indexData
+    ```
+
+4. Insert data with indexing and custom batch size:
+
+    ```
+    java -cp benchmark-assembly-0.1.jar com.cloudwick.mongo.Driver mongo --mode insert 100000 1000000 100000000 --indexData --batchSize 5000
+    ```
+
+5. Benchmark random reads of 10000, 100000 and 1000000 documents:
+
+    ```
+    java -cp benchmark-assembly-0.1.jar com.cloudwick.mongo.Driver mongo --mode read 10000 100000 1000000
+    ```
+
+6. Perform aggregation queries on the inserted data
+
+    ```
+    java -cp benchmark-assembly-0.1.jar com.cloudwick.mongo.Driver mongo --mode agg_query
+    ```
 
 
 
