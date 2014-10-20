@@ -10,6 +10,16 @@ HBase, Redis, Solr and various others.
 
 Getting the Project
 -------------------
+
+There are two methods to build this project 
+
+1. Manual Build 
+2. Download Jar file 
+
+For Manual Build follow the below steps 
+
+Method 1 
+--------
 Clone the project using git:
 
 ```
