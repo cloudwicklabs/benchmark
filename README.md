@@ -354,7 +354,7 @@ cd /tmp
 ```
 
 
-###Benchmarking Mongo using the jar file 
+###Benchmarking Mongo using the jar
 ```
 java -cp benchmark-assembly-0.1.jar com.cloudwick.mongo.Driver --help
 mongo 0.7
