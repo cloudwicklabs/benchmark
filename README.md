@@ -447,6 +447,69 @@ Mongo Benchmark Example(s):
     ```
 
 
+###Benchmarking Solr using Jar 
+
+```
+# java -cp benchmark-assembly-0.1.jar com.cloudwick.solr.Driver --help
+solr 0.1
+Usage: index_logs [options] [<totalEvents>...]
+
+Indexes log events to solr
+  -m <index|read|search> | --mode <index|read|search>
+        operation mode ('index' will index logs, 'search' will perform search &'read' will perform random reads against solr core)
+  -u <value> | --solrServerUrl <value>
+        url for connecting to solr server instance
+  <totalEvents>...
+        total number of events to insert|read
+  -s <value> | --ipSessionCount <value>
+        number of times a ip can appear in a session, defaults to: '25'
+  -l <value> | --ipSessionLength <value>
+        size of the session, defaults to: 50
+  -b <value> | --batchSize <value>
+        flushes events from memory to solr index, defaults to: '1000'
+  -c | --cleanPreviousIndex
+        deletes the existing index on solr core
+  -q <value> | --query <value>
+        solr query to execute, defaults to: '*:*'
+  --queryCount <value>
+        number of documents to return on executed query, default:10
+  --help
+        prints this usage text
+```
+
+
+Solr Driver Example(s):
+
+1. To benchmark the inserts of 100000, 1000000 and 100000000 log events consecutively:
+
+    ```
+    java -cp benchmark-assembly-0.1.jar com.cloudwick.solr.Driver solr --mode insert 100000 1000000 100000000
+    ```
+
+2. To benchmark the inserts of 100000, 1000000 and 100000000 log events consecutively while clearing existing index data:
+
+    ```
+    java -cp benchmark-assembly-0.1.jar com.cloudwick.solr.Driver solr --mode insert 100000 1000000 100000000 --cleanPreviousIndex
+    ```
+
+3. To benchmark the inserts of 100000, 1000000 and 100000000 log events consecutively while clearing existing index data and
+also providing batch size using which the driver will flush the data:
+
+    ```
+    java -cp benchmark-assembly-0.1.jar com.cloudwick.solr.Driver solr --mode insert 100000 1000000 100000000 --cleanPreviousIndex --batchSize 10000
+    ```
+
+4. To benchmark random reads
+
+    ```
+    java -cp benchmark-assembly-0.1.jar com.cloudwick.solr.Driver solr --mode read 10000 100000 1000000
+    ```
+
+5. To execute custom queries and return specified number of documents
+
+    ```
+    java -cp benchmark-assembly-0.1.jar com.cloudwick.solr.Driver solr --mode search --query '*:*' --queryCount 20
+```
 
 ###License and Authors
 Authors: [Ashrith](http://github.com/ashrithr)
