@@ -511,7 +511,76 @@ also providing batch size using which the driver will flush the data:
     java -cp benchmark-assembly-0.1.jar com.cloudwick.solr.Driver solr --mode search --query '*:*' --queryCount 20
 ```
 
+
+###Benchmarking Cassandra using Jar
+
+```
+]# java -cp benchmark-assembly-0.1.jar com.cloudwick.cassandra.Driver --help
+cassandra 0.5
+Usage: cassandra_benchmark [options] [<totalEvents>...]
+
+  -m <insert|read|query> | --mode <insert|read|query>
+        operation mode ('insert' will insert log events, 'read' will perform random reads & 'query' performs pre-defined set of queries on the inserted data set)
+  -n <value> | --cassNode <value>
+        cassandra node to connect, defaults to: '127.0.0.1'
+  <totalEvents>...
+        total number of events to insert|read
+  -b <value> | --batchSize <value>
+        size of the batch to flush to cassandra; set this to avoid single inserts, defaults to: '0'
+  -c <value> | --customersDataSize <value>
+        size of the data set of customers to use for generating data, defaults to: '1000'
+  -k <value> | --keyspaceName <value>
+        name of the database to create|connect in cassandra, defaults to: 'moviedata'
+  -d | --dropExistingTables
+        drop existing tables in the keyspace, defaults to: 'false'
+  -a | --aSyncInserts
+        performs asynchronous inserts, defaults to: 'false'
+  -r <value> | --replicationFactor <value>
+        replication factor to use when inserting data, defaults to: '1'
+  -o <value> | --operationRetries <value>
+        number of times a operation has to retired before exhausting, defaults to: '10'
+  -t <value> | --threadsCount <value>
+        number of threads to use for write and read operations, defaults to: 1
+  -p <value> | --threadPoolSize <value>
+        size of the thread pool, defaults to: 10
+  --help
+        prints this usage text
+```
+
+
+Cassandra Benchmark Example(s):
+
+1. Inserts of 2500, 25000, 250000 of rows into 4 tables which is equivalent to 10000, 100000, 1000000 insertions
+
+    ```
+    java -cp benchmark-assembly-0.1.jar com.cloudwick.cassandra.Driver cassandra --mode insert 2500 25000 250000
+    ```
+2. Inserts of 2500, 25000, 250000 of rows into 4 tables using batch inserts with a batch size of 500
+
+    ```
+    java -cp benchmark-assembly-0.1.jar com.cloudwick.cassandra.Driver cassandra --mode insert 2500 25000 250000 --batchSize 500
+    ```
+3. Inserts of 2500, 25000, 250000 of rows into 4 tables using batch inserts with a batch size of 500 and also delete the
+previously existing data in the tables:
+
+    ```
+    java -cp benchmark-assembly-0.1.jar com.cloudwick.cassandra.Driver cassandra --mode insert 2500 25000 250000 --batchSize 500 --dropExistingTables
+    ```
+4. Inserts in asynchronous mode, which does not required acknowledge back from cassandra:
+
+    ```
+    java -cp benchmark-assembly-0.1.jar com.cloudwick.cassandra.Driver cassandra --mode insert 2500 25000 250000 --batchSize 500 --dropExistingTables --aSyncInserts
+    ```
+5. Random reads
+
+    ```
+    java -cp benchmark-assembly-0.1.jar com.cloudwick.cassandra.Driver cassandra --mode read 2500 25000 250000
+    ```
+
+
 ###License and Authors
 Authors: [Ashrith](http://github.com/ashrithr)
 
 Apache 2.0. Please see `LICENSE.txt`. All contents copyright (c) 2013, Cloudwick Labs.
+
+
