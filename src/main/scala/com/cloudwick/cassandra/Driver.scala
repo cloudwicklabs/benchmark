@@ -17,6 +17,24 @@ object Driver extends App {
    */
   val optionsParser = new scopt.OptionParser[OptionsConfig]("cassandra_benchmark") {
     head("cassandra", "0.5")
+    arg[Int]("<totalEvents>...") unbounded() optional() action { (x, c) =>
+      c.copy(totalEvents = c.totalEvents :+ x)
+    } text "total number of events to insert|read"
+    opt[Unit]('a', "aSyncInserts") action { (_, c) =>
+      c.copy(aSync = true)
+    } text "performs asynchronous inserts, defaults to: 'false'"
+    opt[Int]('b', "batchSize") action { (x, c) =>
+      c.copy(batchSize = x)
+    } text "size of the batch to flush to cassandra; set this to avoid single inserts, defaults to: '0'"
+    opt[Int]('c', "customersDataSize") action { (x, c) =>
+      c.copy(customerDataSetSize = x)
+    } text "size of the data set of customers to use for generating data, defaults to: '1000'"
+    opt[Unit]('d', "dropExistingTables") action { (_, c) =>
+      c.copy(dropExistingTables = true)
+    } text "drop existing tables in the keyspace, defaults to: 'false'"
+    opt[String]('k', "keyspaceName") action { (x,c) =>
+      c.copy(keyspaceName = x)
+    } text "name of the database to create|connect in cassandra, defaults to: 'moviedata'"
     opt[String]('m', "mode") required() valueName "<insert|read|query>" action { (x, c) =>
       c.copy(mode = x)
     } validate { x: String =>
@@ -29,36 +47,18 @@ object Driver extends App {
     opt[String]('n', "cassNode") unbounded() action { (x, c) =>
       c.copy(cassandraNode = c.cassandraNode :+ x)
     } text "cassandra node to connect, defaults to: '127.0.0.1'"
-    arg[Int]("<totalEvents>...") unbounded() optional() action { (x, c) =>
-      c.copy(totalEvents = c.totalEvents :+ x)
-    } text "total number of events to insert|read"
-    opt[Int]('b', "batchSize") action { (x, c) =>
-      c.copy(batchSize = x)
-    } text "size of the batch to flush to cassandra; set this to avoid single inserts, defaults to: '0'"
-    opt[Int]('c', "customersDataSize") action { (x, c) =>
-      c.copy(customerDataSetSize = x)
-    } text "size of the data set of customers to use for generating data, defaults to: '1000'"
-    opt[String]('k', "keyspaceName") action { (x,c) =>
-      c.copy(keyspaceName = x)
-    } text "name of the database to create|connect in cassandra, defaults to: 'moviedata'"
-    opt[Unit]('d', "dropExistingTables") action { (_, c) =>
-      c.copy(dropExistingTables = true)
-    } text "drop existing tables in the keyspace, defaults to: 'false'"
-    opt[Unit]('a', "aSyncInserts") action { (_, c) =>
-      c.copy(aSync = true)
-    } text "performs asynchronous inserts, defaults to: 'false'"
-    opt[Int]('r', "replicationFactor") action { (x, c) =>
-      c.copy(replicationFactor = x)
-    } text "replication factor to use when inserting data, defaults to: '1'"
     opt[Int]('o', "operationRetries") action { (x, c) =>
       c.copy(operationRetires = x)
     } text "number of times a operation has to retired before exhausting, defaults to: '10'"
-    opt[Int]('t', "threadsCount") action { (x, c) =>
-      c.copy(threadCount = x)
-    } text "number of threads to use for write and read operations, defaults to: 1"
     opt[Int]('p', "threadPoolSize") action { (x, c) =>
       c.copy(threadPoolSize = x)
     } text "size of the thread pool, defaults to: 10"
+    opt[Int]('r', "replicationFactor") action { (x, c) =>
+      c.copy(replicationFactor = x)
+    } text "replication factor to use when inserting data, defaults to: '1'"
+    opt[Int]('t', "threadsCount") action { (x, c) =>
+      c.copy(threadCount = x)
+    } text "number of threads to use for write and read operations, defaults to: 1"
     help("help") text "prints this usage text"
   }
 
@@ -99,7 +99,7 @@ object Driver extends App {
 
         if(config.totalEvents.size == 0) {
           val events = 10000
-          logger.info("Defaulting inserts to {} into 4 tables", events)
+          logger.info("Defaulting inserts to {} into {} tables", events, tableList.size)
           if (config.batchSize == 0) {
             new InsertConcurrent(events, config).run()
           } else {

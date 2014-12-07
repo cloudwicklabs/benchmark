@@ -78,7 +78,7 @@ public class MovieDAO {
 
   /**
    * Connects to the cassandra cluster using the provided keyspace
-   * @param keyspace
+   * @param keyspace name of the keyspace to connect to
    */
   public void connect(String keyspace) {
     if (session == null) {
@@ -151,7 +151,7 @@ public class MovieDAO {
    */
   public void loadWatchHistory(String keyspace, Integer cid, String ts,
                                Integer pt, Integer mid, String mname, Boolean async) {
-    if (async == true) {
+    if (async) {
       getSession().executeAsync(String.format("INSERT INTO %s.watch_history " +
           "(cid, ts, pt, mid, movie_name) VALUES (" +
           "%d, '%s', %d, %d, '%s');", keyspace, cid, ts, pt, mid, mname));
@@ -186,7 +186,7 @@ public class MovieDAO {
           tableValues.get(4)
       ));
     }
-    if (async == true)
+    if (async)
       getSession().executeAsync(batchStatement);
     else
       getSession().execute(batchStatement);
@@ -205,7 +205,7 @@ public class MovieDAO {
    */
   public void loadCustomerRatings(String keyspace, Integer cid, Integer mid,
                                   String mname, String cname, Float rating, Boolean async) {
-    if (async == true) {
+    if (async) {
       getSession().executeAsync(String.format("INSERT INTO %s.customer_rating " +
           "(cid, mid, movie_name, customer_name, rating) VALUES (" +
           "%d, %d, '%s', '%s', %f);", keyspace, cid, mid, mname, cname, rating));
@@ -240,7 +240,7 @@ public class MovieDAO {
           Float.parseFloat(tableValues.get(4))
       ));
     }
-    if (async == true)
+    if (async)
       getSession().executeAsync(batchStatement);
     else
       getSession().execute(batchStatement);
@@ -259,7 +259,7 @@ public class MovieDAO {
    */
   public void loadCustomerQueue(String keyspace, Integer cid, String ts,
                                 String cname, Integer mid, String mname, Boolean async) {
-    if (async == true) {
+    if (async) {
       getSession().executeAsync(String.format("INSERT INTO %s.customer_queue " +
           "(cid, ts, customer_name, mid, movie_name) VALUES (" +
           "%d, '%s', '%s', %d, '%s');", keyspace, cid, ts, cname, mid, mname));
@@ -294,7 +294,7 @@ public class MovieDAO {
           tableValues.get(4)
       ));
     }
-    if (async == true)
+    if (async)
       getSession().executeAsync(batchStatement);
     else
       getSession().execute(batchStatement);
@@ -313,7 +313,7 @@ public class MovieDAO {
    */
   public void loadMovieGenre(String keyspace, String genre, Integer ryear,
                              Integer mid, Integer dur, String mname, Boolean async) {
-    if (async == true) {
+    if (async) {
       getSession().executeAsync(String.format("INSERT INTO %s.movies_genre " +
           "(genre, release_year, mid, duration, movie_name) VALUES (" +
           "'%s', %d, %d, %d, '%s');", keyspace, genre, ryear, mid, dur, mname));
@@ -348,7 +348,7 @@ public class MovieDAO {
           tableValues.get(4)
       ));
     }
-    if (async == true)
+    if (async)
       getSession().executeAsync(batchStatement);
     else
       getSession().execute(batchStatement);

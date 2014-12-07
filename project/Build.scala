@@ -25,7 +25,7 @@ object Build extends Build {
       "jp.sf.amateras.solr.scala" %% "solr-scala-client" % "0.0.8",
       "com.datastax.cassandra" % "cassandra-driver-core" % "2.1.2"
 //      "org.apache.hadoop" % "hadoop-client" % "2.0.0-mr1-cdh4.5.0.2",
-//      "org.apache.hbase" % "hbase" % "0.94.6-cdh4.5.0"
+//      "org.apache.hbase" % "hbase" % "0.94.6-cdh4.5.0" intransitive() excludeAll(ExclusionRule(organization = "org.jruby"))
     )
 
     val testDependencies = Seq(

@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 SELF=`which "$0" 2> /dev/null`
 [ $? -gt 0 -a -f "$0" ] && SELF="./$0"

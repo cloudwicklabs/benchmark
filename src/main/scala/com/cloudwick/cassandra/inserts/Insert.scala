@@ -27,6 +27,7 @@ class Insert(eventsStartRange: Int,
 
   def run() = {
     import retryBlock.retry
+
     val totalRecords = eventsEndRange - eventsStartRange + 1
     val movieDAO = new MovieDAO(config.cassandraNode)
     val customersSize = customersMap.size
@@ -123,7 +124,7 @@ class Insert(eventsStartRange: Int,
         }
         counter.getAndAdd(4)
       }
-      logger.debug(s"Records inserted by ${threadName} is : ${totalRecords * 4} from(${eventsStartRange}) to(${eventsEndRange})")
+      logger.debug(s"Records inserted by $threadName is : ${totalRecords * 4} from($eventsStartRange) to($eventsEndRange)")
     } finally {
       movieDAO.close()
     }
