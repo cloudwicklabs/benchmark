@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!-- Movies indexing -->
+
+<schema name="Logs" version="1.5">
+    <fields>
+        <!-- Movie data -->
+        <field name="mid" type="tint" indexed="true" stored="true" required="true" />
+        <field name="release_year" type="tint" indexed="true" stored="true"/>
+        <field name="movie_name" type="string" indexed="true" stored="true"/>
+        <field name="genre" type="string" indexed="true" stored="true"/>
+        <field name="duration" type="tint" indexed="false" stored="true"/>
+        <field name="_version_" type="long" indexed="true" stored="true"/>
+    </fields>
+
+    <!-- Field to use to determine and enforce document uniqueness. -->
+    <uniqueKey>(genre, release_year, mid)</uniqueKey>
+    <defaultSearchField>movie_name</defaultSearchField>
+
+    <types>
+        <fieldType name="string" class="solr.StrField" sortMissingLast="true" />
+        <analyzer>
+            <tokenizer class="solr.StandardTokenizerFactory"/>
+            <filter class="solr.LowerCaseFilterFactory"/>
+        </analyzer>
+        <fieldType name="int" class="solr.TrieIntField" precisionStep="0" positionIncrementGap="0"/>
+        <fieldType name="long" class="solr.TrieLongField" precisionStep="0" positionIncrementGap="0"/>
+        <fieldType name="tint" class="solr.TrieIntField" precisionStep="8" positionIncrementGap="0"/>
+        <fieldType name="date" class="solr.TrieDateField" precisionStep="0" positionIncrementGap="0"/>
+        <fieldType name="tdate" class="solr.TrieDateField" precisionStep="6" positionIncrementGap="0"/>
+    </types>
+</schema>
